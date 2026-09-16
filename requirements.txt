@@ -1,0 +1,4 @@
+google-genai>=1.30,<2
+sounddevice>=0.5,<1
+numpy>=2,<3
+keyring>=25,<26
