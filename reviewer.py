@@ -150,14 +150,14 @@ LEVEL-SPECIFIC REVIEW FRAMEWORK
 {criteria}
 
 HOW TO APPLY THE FRAMEWORK
-- Review the whole coaching conversation first, then examine individual markers/behavioral statements.
+- Review the whole coaching conversation first, then examine individual behavioral statements.
 - Do not treat absence of a behavior as failure when there was no reasonable opportunity to demonstrate it.
 - Distinguish NOT OBSERVED from NO OPPORTUNITY and NOT ASSESSABLE.
 - Use the client's actual words and timestamps whenever evidence is available.
 - Consider patterns across the session, not isolated coach sentences only.
 - Do not reward performative depth, excessive questioning, forced action, or generic empathy.
-- Do not infer that a marker was demonstrated merely because the coach asked a question about it.
-- When a marker is only partially evidenced, explain exactly what was present and what was missing.
+- Do not infer that a behavior was demonstrated merely because the coach asked a question about it.
+- When a behavior is only partially evidenced, explain exactly what was present and what was missing.
 - Ethical/role concerns should be reported only when observable in the transcript.
 
 LOCAL SESSION METRICS (descriptive, not ICF scoring)
@@ -180,18 +180,18 @@ DEVELOPMENTAL REVIEW — {level}
 ASSESSMENT BASIS: {source_name}
 
 WHAT THE COACH DID WELL
-Give 3-5 evidence-based observations with marker/behavior references and timestamps where possible.
+Give 3-5 evidence-based observations with competency/behavior references and timestamps where possible.
 Do not praise vaguely.
 
 MARKER / BEHAVIORAL EVIDENCE
-Review every marker or behavioral statement in the selected framework that can reasonably
+Review every current MSR behavioral statement in the selected framework that can reasonably
 be evaluated from this session. For each item use this compact format:
-[Marker ID or short behavior name] — OBSERVED / PARTIAL EVIDENCE / NOT OBSERVED / NO OPPORTUNITY / NOT ASSESSABLE
+[Competency + short behavior name] — OBSERVED / PARTIAL EVIDENCE / NOT OBSERVED / NO OPPORTUNITY / NOT ASSESSABLE
 Evidence: timestamp(s) and a concise explanation.
 Development note: only when useful.
 
-Do not fabricate marker IDs for MCC. MCC uses behavioral statements rather than the ACC/PCC
-numbering scheme; use concise behavior names under the relevant competency.
+Use the current MSR behavior descriptions supplied above. Do not invent or reintroduce
+legacy ACC/PCC marker numbers unless an identifier is explicitly present in the current framework.
 
 COMPETENCY SYNTHESIS
 For Competencies 1 and 3-8, summarize the pattern of evidence using:
@@ -207,10 +207,10 @@ over-reflection, weak agreement, or coach-controlled closure.
 
 THREE HIGH-LEVERAGE PRACTICE EDGES
 Give exactly three behaviorally observable changes the coach could practice next time.
-Link each practice edge to one or more specific markers/behavioral statements.
+Link each practice edge to one or more specific current MSR behavioral statements.
 
 MOMENTS WORTH REVISITING
-Choose up to 3 coach turns. For each, show timestamp, what happened, relevant marker/behavior,
+Choose up to 3 coach turns. For each, show timestamp, what happened, relevant MSR behavior,
 and one alternative coaching move that preserves client ownership. Alternatives are examples,
 not 'correct answers'.
 
