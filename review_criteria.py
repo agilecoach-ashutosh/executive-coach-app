@@ -1,207 +1,269 @@
-"""Level-specific developmental review criteria for Presence Coach.
+"""Latest ICF Minimum Skills Requirements used by Presence Coach reviews.
 
-ACC and PCC criteria below are grounded in the user-selected ICF reference documents:
-- ACC Behaviorally Anchored Rating Scales (BARS), August 2022.
-- ICF PCC Markers, revised November 2020 / rev. 06.25.21.
+All three lenses use the current ICF Minimum Skills Requirements (MSRs) aligned with
+the 2025 ICF Core Competencies. ACC and MCC updates apply to evaluations beginning
+January 1, 2026. PCC expectations were not materially changed, but ICF reformatted
+them into the same MSR structure for consistency.
 
-MCC criteria are a concise paraphrase of the ICF MCC Minimum Skills Requirements,
-rev. January 26, 2026. These criteria are used only for developmental AI review and
-must never be presented as an official ICF assessment, score, or pass/fail decision.
+The criteria below are concise paraphrases for developmental AI review. They are not
+an official ICF assessment instrument, score, pass/fail result, or substitute for a
+trained ICF assessor / mentor coach.
 """
 from __future__ import annotations
 
 
-ACC_SOURCE = "ICF ACC Behaviorally Anchored Rating Scales (BARS), August 2022"
-PCC_SOURCE = "ICF Professional Certified Coach (PCC) Markers, rev. 06.25.21"
-MCC_SOURCE = "ICF MCC Minimum Skills Requirements, rev. January 26, 2026"
+ACC_SOURCE = "ICF ACC Minimum Skills Requirements, rev. September 16, 2025 (effective January 1, 2026)"
+PCC_SOURCE = "ICF PCC Minimum Skills Requirements, rev. September 16, 2025"
+MCC_SOURCE = "ICF MCC Minimum Skills Requirements, rev. September 16, 2025 (effective January 1, 2026)"
+
+
+COMMON_LIMIT = """
+TRANSCRIPT LIMITATION
+A text transcript cannot fully evidence tone, energy, body language, nonverbal cues,
+or the quality/duration of silence. Use session notes and local interruption metrics
+only where they provide direct evidence. Otherwise mark these areas NOT ASSESSABLE or
+LIMITED EVIDENCE rather than inferring them.
+"""
 
 
 ACC_CRITERIA = """
-SOURCE: ICF ACC Behaviorally Anchored Rating Scales (BARS), August 2022.
-Use these behavioral statements as developmental evidence anchors, not as a formulaic
-checklist or an official pass/fail assessment.
+SOURCE: Current ICF ACC Minimum Skills Requirements.
+Apply the framework holistically. Review both behaviors consistent with ICF coaching
+standards and behaviors inconsistent with those standards. Do not use it as a rigid
+checklist or official pass/fail formula.
 
 Competency 1 — Demonstrates Ethical Practice
-- Qualifier E1: Coach demonstrates alignment with the ICF Code of Ethics.
-- Qualifier E2: Coach demonstrates consistent alignment with the role of coach.
-For transcript-only review, report only observable role/ethics evidence. Do not infer
-private conduct, contracting, confidentiality practices, or circumstances not shown.
+Consistent evidence:
+- Coach stays in the coaching role and supports the client's own insight rather than giving answers.
+- Coach uses trust, presence, listening, and awareness-evoking skills in a recognizably coaching conversation.
+Inconsistent evidence:
+- Advice/consulting dominates, the coach repeatedly tells the client what to do, or the conversation moves into a therapeutic role.
+- Any observable ethical violation or role confusion.
 
 Competency 2 — Embodies a Coaching Mindset
-- The ACC BARS document has no session behavioral statements for this competency.
-- Do not score this competency from one transcript. You may note transcript evidence
-  relevant to curiosity/flexibility, but label it as limited and non-diagnostic.
+- The competency develops across the coach's professional journey and is primarily evaluated outside a single performance transcript.
+- Do not score it from one session. You may note limited observable evidence of openness, curiosity, flexibility, and client-centeredness.
 
 Competency 3 — Establishes and Maintains Agreements
-- A3.1 Coach invites the client to identify their desired coaching outcome.
-- A3.2 Coach and client reach an agreement on what the client wants to accomplish in the session.
-- A3.3 Coach shows curiosity about the client and how the client relates to what they want to accomplish.
-- A3.4 Coach attends to the agenda set by the client throughout the session unless the client indicates otherwise.
+Consistent evidence:
+- Coach explores the client's chosen topic with them.
+- Coach and client reach a clear agreement on the desired session outcome.
+- Coach explores why that outcome matters to the client.
+- Coach stays with the agreed agenda unless the client chooses a shift.
+Inconsistent evidence:
+- No real agreement conversation; coach chooses or redirects the topic.
+- Desired session outcome is never verbally confirmed.
+- Coach moves away from the client's agenda without noticing or re-contracting.
 
 Competency 4 — Cultivates Trust and Safety
-- A4.1 Coach acknowledges client insights and learning in the moment.
-- A4.2 Coach explores the client's expression of feelings, perceptions, concerns, beliefs, or suggestions.
-- A4.3 Coach expresses support and concern for the client, which may focus on the client's context, problem, or situation rather than the client holistically.
+Consistent evidence:
+- Coach acknowledges the client's work in the session.
+- Coach communicates respect, support, or concern.
+- Coach supports exploration of feelings, perceptions, concerns, and beliefs.
+Inconsistent evidence:
+- Coach prioritizes their own knowledge/view over the client's perspective.
+- Coach ignores client thoughts/feelings or responds dismissively, judgmentally, or disrespectfully.
+- Coach repeatedly misses opportunities to acknowledge the client's work.
 
 Competency 5 — Maintains Presence
-- A5.1 Coach is curious throughout the session.
-- A5.2 Coach acknowledges situations that the client presents.
-- A5.3 Coach allows the client to direct the conversation at least some of the time.
+Consistent evidence:
+- Coach is observant and responsive to what the client presents.
+- Coach demonstrates curiosity about the client and/or their agenda.
+- Coach lets the client lead parts of the session.
+- Coach allows reflective silence rather than immediately filling it.
+Inconsistent evidence:
+- Coach misses meaningful client responses/insights, interrupts, fills silence, or directs the process.
+- Coach focuses on demonstrating their own knowledge/performance.
+- Coach leads the conversation instead of co-creating what to explore next.
 
 Competency 6 — Listens Actively
-- A6.1 Coach uses summarizing or paraphrasing to make sure they understood the client correctly.
-- A6.2 Coach makes observations that support the client in creating new associations.
-- A6.3 Coach co-creates a shared vision with the client.
+Consistent evidence:
+- Coach recognizes feelings, perceptions, challenges, or beliefs in what the client communicates.
+- Coach explores or uses the client's own language.
+- Coach summarizes/paraphrases to confirm understanding.
+Inconsistent evidence:
+- Responses are generic or unrelated to the client's desired outcome.
+- Coach listens mainly for a chance to advise or demonstrate expertise.
+- Summaries are overly complex, or coach assumes understanding without checking accuracy/shared meaning.
 
 Competency 7 — Evokes Awareness
-- A7.1 Coach acknowledges the client's new awareness, learning, and movement toward the desired outcome.
-- A7.2 Coach supports the client in viewing the situation from new or different perspectives.
-- A7.3 Coach inquires about or explores the client's ideas, beliefs, thinking, emotions, and behaviors in relation to the desired outcome.
+Consistent evidence:
+- Coach helps the client consider different perspectives.
+- Coach explores feelings, perceptions, behaviors, and beliefs.
+- Coach asks clear, open-ended questions one at a time.
+Inconsistent evidence:
+- Questions/observations are mainly leading, closed, predetermined, or coach-agenda driven.
+- Coach does not leave enough reflective space before adding another question.
+- Language is confusing/overly complex, or focus stays only on solving the outcome without exploring the person.
 
 Competency 8 — Facilitates Client Growth
-- A8.1 Coach partners with the client to create or confirm specific action plans.
-- A8.2 Coach asks questions to support the client in translating awareness into action.
-- A8.3 Coach supports the client to close the session.
-"""
+Consistent evidence:
+- Coach asks about the client's learning from the session.
+- Coach supports the client to use learning to create their own next steps.
+- Coach partners with the client to close the session.
+Inconsistent evidence:
+- Coach does not explore learning/progress or how learning may be applied.
+- Coach prescribes actions rather than supporting client-designed action.
+- Coach controls the timing/method of session closure.
+""" + COMMON_LIMIT
 
 
 PCC_CRITERIA = """
-SOURCE: ICF Professional Certified Coach (PCC) Markers, rev. 06.25.21.
-Use these markers as developmental evidence anchors, not as a formulaic checklist or
-an official pass/fail assessment.
+SOURCE: Current ICF PCC Minimum Skills Requirements.
+Apply the framework holistically. PCC uses advanced behavioral marker statements plus
+behaviors inconsistent with ICF coaching standards. Do not treat the list as a formula
+for passing an evaluation.
 
 Competency 1 — Demonstrates Ethical Practice
-- Look for observable alignment with the ICF Code of Ethics and consistency in the role of coach.
+Consistent evidence:
+- Coach remains clearly in the coaching role and facilitates the client's own insight using core coaching skills.
+Inconsistent evidence:
+- Consulting/advice or therapeutic-mode behavior dominates, or another observable ethical/role violation occurs.
 
 Competency 2 — Embodies a Coaching Mindset
-- The PCC document notes that some aspects may be visible through markers 4.1, 4.3, 4.4,
-  5.1, 5.2, 5.3, 5.4, 6.1, 6.5, 7.1, and 7.5, while the competency itself extends beyond
-  what one recorded conversation can demonstrate.
+- This competency extends beyond one session and is primarily evaluated elsewhere.
+- Session evidence may include respect for client contributions, support for expression,
+  partnership around coach contributions, responding to both who/what, client choice,
+  curiosity, customized listening, exploration of client worldview, and unattached observations.
 
 Competency 3 — Establishes and Maintains Agreements
-- 3.1 Coach partners with the client to identify or reconfirm what the client wants to accomplish in this session.
-- 3.2 Coach partners with the client to define or reconfirm measures of success for what the client wants to accomplish.
-- 3.3 Coach explores what is important or meaningful to the client about what they want to accomplish.
-- 3.4 Coach partners with the client to define what the client believes they need to address to achieve the desired session outcome.
+Consistent evidence:
+- Coach partners to identify/reconfirm the session outcome.
+- Coach partners to define/reconfirm how the client will know the session was useful/successful.
+- Coach explores why the outcome matters.
+- Coach partners to identify what the client believes needs attention to move toward the outcome.
+Inconsistent evidence:
+- Coach chooses the topic, skips explicit outcome confirmation, or does not partner around success measures/meaning/what needs exploration.
+- Coach ignores meaningful shifts or changes focus without explicit client choice.
 
 Competency 4 — Cultivates Trust and Safety
-- 4.1 Coach acknowledges and respects the client's unique talents, insights, and work in the coaching process.
-- 4.2 Coach shows support, empathy, or concern for the client.
-- 4.3 Coach acknowledges and supports the client's expression of feelings, perceptions, concerns, beliefs, or suggestions.
-- 4.4 Coach invites the client to respond in any way to the coach's contributions and accepts the client's response.
+Consistent evidence:
+- Coach acknowledges/respects the client's talents, insights, and work.
+- Coach shows support/empathy/concern.
+- Coach supports expression of feelings, perceptions, concerns, beliefs, or suggestions.
+- Coach invites the client to respond freely to coach contributions and accepts the response.
+Inconsistent evidence:
+- Coach imposes knowledge, interpretation, or point of view.
+- Coach communicates lack of confidence in the client, or is dismissive/judgmental/disrespectful.
+- Coach misses timely acknowledgement of client work, talents, or insights.
 
 Competency 5 — Maintains Presence
-- 5.1 Coach responds to the whole person of the client (the who).
-- 5.2 Coach responds to what the client wants to accomplish throughout the session (the what).
-- 5.3 Coach supports the client to choose what happens in the session.
-- 5.4 Coach demonstrates curiosity to learn more about the client.
-- 5.5 Coach allows for silence, pause, or reflection.
+Consistent evidence:
+- Coach responds to both the person (who) and desired session outcome (what).
+- Coach supports client choice about what happens in the session.
+- Coach demonstrates curiosity about the client.
+- Coach allows silence, pause, or reflection.
+Inconsistent evidence:
+- Coach imposes their own processing style, overlooks identity/context/feelings/language,
+  focuses only on the problem, coaches to their own agenda, interrupts, directs, or fills silence.
 
 Competency 6 — Listens Actively
-- 6.1 Questions and observations are customized using what the coach has learned about who the client is or the client's situation.
-- 6.2 Coach explores the words the client uses.
-- 6.3 Coach explores the client's emotions.
-- 6.4 Coach explores energy shifts, nonverbal cues, or other behaviors.
-- 6.5 Coach explores how the client currently perceives themself or their world.
-- 6.6 Coach allows the client to complete speaking without interrupting unless there is a stated coaching purpose.
-- 6.7 Coach succinctly reflects or summarizes what the client communicated to support clarity and understanding.
+Consistent evidence:
+- Questions/observations are customized to what has been learned about the client/situation.
+- Coach explores the client's words and emotions.
+- Coach explores relevant energy/nonverbal/behavioral cues when observable.
+- Coach explores how the client perceives self/world.
+- Coach lets the client complete speaking unless interruption has a stated coaching purpose.
+- Coach reflects/summarizes succinctly to support clarity/shared understanding.
+Inconsistent evidence:
+- Coach relies on generic questions rather than client-specific language/context.
+- Coach assumes meanings instead of exploring the client's definitions.
+- Coach dismisses feelings or fails to invite correction/response to summaries.
 
 Competency 7 — Evokes Awareness
-- 7.1 Coach asks about the client: thinking, feeling, values, needs, wants, beliefs, or behavior.
-- 7.2 Coach helps the client explore beyond current thinking/feeling to expanded ways of thinking/feeling about themself (the who).
-- 7.3 Coach helps the client explore beyond current thinking/feeling to expanded ways of thinking/feeling about the situation (the what).
-- 7.4 Coach helps the client explore beyond current thinking, feeling, or behaving toward the desired outcome.
-- 7.5 Coach shares observations, intuitions, comments, thoughts, or feelings without attachment and invites the client's exploration.
-- 7.6 Coach asks clear, direct, primarily open-ended questions, one at a time, at a pace allowing reflection.
-- 7.7 Coach uses generally clear and concise language.
-- 7.8 Coach allows the client to do most of the talking.
+Consistent evidence:
+- Coach explores the client's thinking, feelings, values, needs, wants, beliefs, or behavior.
+- Coach helps expand awareness about both the client (who) and situation (what), and toward the desired outcome.
+- Coach may offer observations/intuitions without attachment and invites free exploration.
+- Questions are clear, direct, primarily open-ended, one at a time, with reflective space.
+- Coach language is concise and the client does most of the talking.
+Inconsistent evidence:
+- Coach leads toward their own perspective, offers definitive interpretations, or does not allow disagreement.
+- Coach is overly wordy/complex or crowds the client's reflective space.
 
 Competency 8 — Facilitates Client Growth
-- 8.1 Coach invites or allows the client to explore progress toward the desired session outcome.
-- 8.2 Coach invites the client to state or explore learning about themself (the who).
-- 8.3 Coach invites the client to state or explore learning about the situation (the what).
-- 8.4 Coach invites the client to consider how they will use new learning from the session.
-- 8.5 Coach partners with the client to design post-session thinking, reflection, or action.
-- 8.6 Coach partners with the client to consider how to move forward, including resources, support, or potential barriers.
-- 8.7 Coach partners with the client to design the best methods of accountability for themself.
-- 8.8 Coach celebrates the client's progress and learning.
-- 8.9 Coach partners with the client on how they want to complete the session.
-
-TRANSCRIPT LIMITATION
-Marker 6.4 cannot be reliably evaluated from a text transcript alone unless an explicit
-session note captures the relevant observable cue. Silence/pause (5.5), interruption
-quality (6.6), tone, energy, and other audio/nonverbal behaviors may also be only
-partially assessable from transcript and local metrics. Mark these Not assessable or
-Limited evidence rather than inventing evidence.
-"""
+Consistent evidence:
+- Coach invites exploration of progress toward the session outcome.
+- Coach invites learning about self (who) and situation (what).
+- Coach explores how learning will be used.
+- Coach partners on client-designed post-session reflection/action, resources/support/barriers, and accountability.
+- Coach acknowledges/celebrates progress and partners on how the client wants to close.
+Inconsistent evidence:
+- Coach states progress without client input, prescribes actions, or fails to support implementation/follow-through.
+- Coach misses learning/progress or controls session closure.
+""" + COMMON_LIMIT
 
 
 MCC_CRITERIA = """
-SOURCE: ICF MCC Minimum Skills Requirements, rev. January 26, 2026.
-This is a concise developmental paraphrase of the official MCC behavioral standard.
-Use it as a holistic mastery lens, not a checklist or official pass/fail assessment.
+SOURCE: Current ICF MCC Minimum Skills Requirements.
+Apply the framework holistically as a mastery lens. MCC is characterized by seamless,
+client-centered integration of the competencies rather than conspicuous technique use.
+Review both behaviors consistent and inconsistent with ICF coaching standards.
 
 Competency 1 — Demonstrates Ethical Practice
-Consistent evidence: stays clearly in the coaching role; uses trust, presence, listening,
-and awareness-evoking skills to facilitate the client's own insight; avoids advice-led,
-consulting-led, or therapeutic-mode conversation.
-Watch for: telling the client what to do, centering the coach's expertise, or moving
-outside the coaching role.
+Consistent evidence:
+- Coach remains fully in the coaching role and uses core coaching skills to facilitate the client's insight.
+Inconsistent evidence:
+- Advice/consulting or therapeutic-mode behavior dominates, or another observable ethical/role violation occurs.
 
 Competency 2 — Embodies a Coaching Mindset
-The official MCC MSR says this competency develops across the coach's professional
-journey and is evaluated through credentialing knowledge assessment. Do not score it
-from one transcript; at most note limited session evidence of openness, curiosity,
-flexibility, and client-centeredness.
+- This competency develops across the coach's professional journey and is not reliably scored from one transcript.
+- Note only limited observable evidence of openness, curiosity, flexibility, and client-centeredness.
 
 Competency 3 — Establishes and Maintains Agreements
-Consistent evidence: co-creates the session focus; explores enough dimensions of the
-topic to clarify intent; confirms shared understanding of the desired outcome; notices
-emerging shifts and re-contracts direction with the client when needed.
-Watch for: vague or coach-led agreements, generic responses, missing shifts, or subtly
-influencing how the client should use the session.
+Consistent evidence:
+- Coach partners to identify the session focus.
+- Coach explores multiple aspects of the topic deeply enough to clarify intent.
+- Coach confirms mutual understanding of the desired session outcome.
+- Coach notices emerging shifts and partners with the client to clarify whether/how direction should change.
+Inconsistent evidence:
+- Agreement is coach-led, insufficiently clarified, generic, or not grounded in the client's own words/concepts.
+- Coach misses shifts or subtly/overtly influences how the client should use the session.
 
 Competency 4 — Cultivates Trust and Safety
-Consistent evidence: recognizes learning/growth as it appears; notices and respects the
-client's emotions, strengths, identity, perspectives, and unique way of processing;
-demonstrates empathy and genuine curiosity about the person.
-Watch for: prioritizing the coach's interpretation, generic responses, judgment,
-dismissiveness, or missed opportunities to acknowledge the client's contributions.
+Consistent evidence:
+- Coach acknowledges learning/growth as it emerges.
+- Coach recognizes emotions, strengths, and other unique client characteristics.
+- Coach seeks deeper understanding of the client's perspectives/identity and demonstrates empathy.
+Inconsistent evidence:
+- Coach prioritizes their own interpretation/knowledge, misses client identity/feelings/beliefs,
+  responds generically, or misses opportunities to acknowledge client progress and contributions.
 
 Competency 5 — Maintains Presence
-Consistent evidence: responds to the whole person in real time; partners around the
-client's needs; remains consistently curious; creates genuine space for reflection,
-pause, and silence.
-Watch for: predefined technique use, teaching/influencing, treating the client as less
-than an equal partner, focusing only on the situation, or crowding the client's space.
+Consistent evidence:
+- Coach responds holistically to the person and keeps the conversation naturally flowing.
+- Coach partners around the client's needs, demonstrates sustained curiosity, and creates space for silence/reflection.
+Inconsistent evidence:
+- Coach treats client as less than an equal partner, relies on a predefined approach,
+  teaches/influences/judges, responds generically, focuses only on the situation, or crowds/interjects into client space.
 
 Competency 6 — Listens Actively
-Consistent evidence: hears nuance in language, emotion, energy, and behavior in relation
-to the client's agenda; responds to the client's thinking/feeling/insight in the moment;
-explores multiple dimensions of the client rather than only solving the situation.
-Watch for: generic questions, solution focus, coach-knowledge focus, or missed client
-language/meaning. Audio/nonverbal elements must be marked Not assessable when absent.
+Consistent evidence:
+- Coach recognizes nuance in client language, emotion, energy, and behavior in relation to the agenda.
+- Coach responses show understanding of the client's thinking/feeling/insight in the moment.
+- Coach explores what is communicated across multiple dimensions of the client, not only the situation.
+Inconsistent evidence:
+- Listening is generic, solution-focused, coach-expertise focused, or misses the client's verbal/nonverbal/emotional communication.
 
 Competency 7 — Evokes Awareness
-Consistent evidence: partners to expand perspective; offers observations or intuitions
-without attachment when useful; uses succinct open questions one at a time; allows
-sufficient reflective space for emerging awareness about both the person and topic.
-Watch for: driving solutions, complex/confusing coach language, insufficient space,
-ignoring the client's words/creative style, or overusing questions instead of other
-awareness-evoking approaches.
+Consistent evidence:
+- Coach partners to expand the client's perspective.
+- Coach offers observations/sensations/insights without attachment when useful.
+- Coach uses succinct open-ended questions one at a time to stimulate client-generated awareness.
+- Coach uses questions, observations, insights, silence, and other approaches responsively rather than mechanically.
+Inconsistent evidence:
+- Coach ignores client-specific language/creative style, provides insufficient reflective space,
+  drives solutions prematurely, uses confusing language, or fails to deepen awareness of both person and agenda.
 
 Competency 8 — Facilitates Client Growth
-Consistent evidence: invites learning about the self; partners to integrate learning
-into meaningful action when the client wants action; supports client-owned follow-through;
-and partners on how/when to complete the session.
-Watch for: coach-prescribed actions, weak integration of learning, missed learning or
-progress, underdeveloped implementation, or coach-controlled closure.
-
-TRANSCRIPT LIMITATION
-MCC mastery includes nuance, silence, energy, behavior, and nonverbal responsiveness.
-A text transcript cannot fully evidence these. Mark such areas Not assessable or
-Limited evidence rather than inferring tone, body language, or energy.
-"""
+Consistent evidence:
+- Coach invites reflection on what the client learned about themself.
+- Coach partners to translate client-generated insight/learning into meaningful action where appropriate.
+- Coach partners with the client to complete the session.
+Inconsistent evidence:
+- Coach misses learning/progress, does not support sufficient implementation detail,
+  prescribes actions, fails to explore broader relevance of insights, or controls closure.
+""" + COMMON_LIMIT
 
 
 def get_review_criteria(level: str) -> tuple[str, str]:
