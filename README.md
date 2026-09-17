@@ -194,6 +194,81 @@ The **ⓘ** button inside Presence also provides direct Gemini and Groq API-key 
 
 ---
 
+# Language support
+
+Language support is different for Gemini and Groq because the two providers use different voice pipelines.
+
+| Provider in Presence | Spoken input | AI understanding | Spoken output in Presence |
+| --- | --- | --- | --- |
+| **Google Gemini Live** | **99 supported languages** | Multilingual | **99 supported languages**; native audio can switch languages naturally during a conversation |
+| **Groq** | **99+ languages** through Whisper | Multilingual capability depends on the selected Groq chat model | **English only in the current Presence configuration** |
+
+## Google Gemini language support
+
+Google's current Gemini Live documentation lists **99 supported languages**. Native audio models can automatically use the appropriate language and can switch between languages naturally during the same conversation.
+
+This makes Gemini the recommended provider in Presence when you want multilingual spoken coaching.
+
+Languages especially relevant for users in India include:
+
+- English
+- Hindi
+- Bengali
+- Assamese
+- Gujarati
+- Kannada
+- Malayalam
+- Marathi
+- Odia
+- Punjabi
+- Tamil
+- Telugu
+- Urdu
+- Nepali
+- Sindhi
+
+Gemini Live also supports many other languages including Arabic, Chinese, French, German, Italian, Japanese, Korean, Portuguese, Russian, Spanish, Thai, Turkish, Ukrainian, Vietnamese, and many more.
+
+For Google's complete current list of supported Gemini Live languages, see:
+
+https://ai.google.dev/gemini-api/docs/live-api/capabilities#supported-languages
+
+**Hinglish / mixed-language conversation:** Gemini native audio can switch between supported languages naturally, so it is currently the better Presence option for conversations that move between Hindi and English.
+
+## Groq language support
+
+Presence uses **Groq Whisper Large V3 Turbo** by default for speech recognition. Groq documents Whisper Large V3 Turbo as supporting **99+ languages** for transcription.
+
+That means Presence can accept speech in many languages through Groq, including Hindi and many other Indian and international languages.
+
+However, the current Groq voice pipeline in Presence uses:
+
+`canopylabs/orpheus-v1-english`
+
+Therefore:
+
+- **Speech input:** multilingual through Whisper
+- **Conversation model:** may understand and generate multiple languages depending on the selected Groq model
+- **Spoken AI response:** **English only in the current Presence implementation**
+
+Groq also provides a separate **Saudi Arabic Orpheus TTS model**, but Presence does **not** currently enable that model.
+
+For Groq's current speech documentation, see:
+
+https://console.groq.com/docs/speech-to-text
+
+https://console.groq.com/docs/text-to-speech
+
+### Which provider should I use for language?
+
+- For **English-only coaching**, Gemini or Groq can be used.
+- For **Hindi, Hinglish, Marathi, Tamil, Telugu, Bengali, Gujarati, Punjabi, Urdu, or other multilingual spoken sessions**, use **Gemini** for the best current Presence experience.
+- Groq can still transcribe multilingual speech, but Presence currently speaks the Groq response back in English.
+
+Provider language capabilities can change over time, so the linked Google and Groq documentation is the source of truth for current provider support.
+
+---
+
 # What the two modes do
 
 ## I am a Coachee
@@ -247,7 +322,9 @@ The current default Live model is:
 
 `gemini-3.1-flash-live-preview`
 
-Provider-controlled model availability can change.
+Gemini Live currently supports 99 languages and is the preferred provider for multilingual spoken sessions in Presence.
+
+Provider-controlled model and language availability can change.
 
 ## Groq
 
@@ -268,7 +345,7 @@ Text → speech
 Speaker / headphones
 ```
 
-Groq Whisper and the conversation model are multilingual. The Orpheus voice used by Presence is currently English-only, so Gemini is currently the better choice when spoken Hindi/Hinglish output is important.
+Groq Whisper supports 99+ languages for spoken input. The Orpheus voice used by Presence is currently English-only, so Gemini is currently the better choice when spoken Hindi/Hinglish or other non-English output is important.
 
 ---
 
@@ -326,7 +403,7 @@ Use the **ⓘ** button in Presence to open the correct provider key page. Confir
 - Presence does not currently save raw session recordings.
 - Saved API keys use the operating-system keyring / Windows Credential Manager.
 
-Provider availability, free quotas, limits, and pricing are controlled by Google and Groq and may change.
+Provider availability, free quotas, limits, pricing, models, and supported languages are controlled by Google and Groq and may change.
 
 ---
 
@@ -366,6 +443,7 @@ Presence uses ICF material as a developmental reference, not as an endorsement o
 - PCC Minimum Skills Requirements: https://coachingfederation.org/resource/pcc-minimum-skills-requirements/
 - MCC Minimum Skills Requirements: https://coachingfederation.org/resource/mcc-minimum-skills-requirements/
 - Gemini Live API: https://ai.google.dev/gemini-api/docs/live-api
+- Gemini Live supported languages: https://ai.google.dev/gemini-api/docs/live-api/capabilities#supported-languages
 - Groq Quickstart: https://console.groq.com/docs/quickstart
 - Groq Speech to Text: https://console.groq.com/docs/speech-to-text
 - Groq Text to Speech: https://console.groq.com/docs/text-to-speech
