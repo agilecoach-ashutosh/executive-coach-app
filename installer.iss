@@ -11,7 +11,7 @@ Compression=lzma2
 SolidCompression=yes
 WizardStyle=modern
 ArchitecturesAllowed=x64compatible
-SetupIconFile=assets\presence.ico
+SetupIconFile=Presence-Coach.ico
 UninstallDisplayIcon={app}\PresenceCoach.exe
 [Files]
 Source: "dist\PresenceCoach\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
