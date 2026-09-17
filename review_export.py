@@ -19,9 +19,21 @@ SECTION_HEADINGS = (
     "BOTTOM LINE",
 )
 
+EVIDENCE_STATUSES = (
+    "OBSERVED",
+    "PARTIAL EVIDENCE",
+    "NOT OBSERVED",
+    "NO OPPORTUNITY",
+    "NOT ASSESSABLE",
+    "LIMITED EVIDENCE",
+    "CONSISTENT",
+    "INCONSISTENT",
+)
+
 STATUS_PATTERN = re.compile(
-    r"^(?:[-*]\s*)?(?P<name>.+?)\s+[—-]\s+"
-    r"(?P<status>OBSERVED|PARTIAL EVIDENCE|NOT OBSERVED|NO OPPORTUNITY|NOT ASSESSABLE)\s*$",
+    r"^(?P<name>.+?)\s+[—-]\s+"
+    r"(?P<status>OBSERVED|PARTIAL EVIDENCE|NOT OBSERVED|NO OPPORTUNITY|"
+    r"NOT ASSESSABLE|LIMITED EVIDENCE|CONSISTENT|INCONSISTENT)\s*$",
     re.IGNORECASE,
 )
 
@@ -35,28 +47,67 @@ def _clean(value: str) -> str:
     return re.sub(r"\s+", " ", (value or "").strip())
 
 
+def _strip_markdown(value: str, *, strip_bullet: bool = False) -> str:
+    """Normalize common Gemini/Groq markdown without losing the actual review text."""
+    line = (value or "").strip()
+    if not line:
+        return ""
+
+    # Markdown headings such as: ### MARKER / BEHAVIORAL EVIDENCE
+    line = re.sub(r"^#{1,6}\s*", "", line)
+
+    # Convert markdown bullet asterisks before removing emphasis markers.
+    if re.match(r"^\*\s+", line):
+        line = re.sub(r"^\*\s+", "- ", line)
+
+    # Remove emphasis/backtick markers while retaining their text.
+    line = line.replace("**", "").replace("__", "").replace("`", "")
+    line = line.replace("***", "").strip()
+    line = re.sub(r"^\*+(?=\S)", "", line)
+    line = re.sub(r"\*+$", "", line).strip()
+
+    if strip_bullet:
+        line = re.sub(r"^[-+•]\s*", "", line).strip()
+    return line
+
+
+def _display_name(value: str) -> str:
+    name = _clean(value)
+    if name.startswith("[") and name.endswith("]"):
+        name = name[1:-1].strip()
+    return name
+
+
 def split_review_sections(review_text: str) -> dict[str, list[str]]:
-    """Split the reviewer narrative into the stable sections requested by reviewer.py."""
+    """Split review text even when the provider returns markdown headings/emphasis."""
     sections: dict[str, list[str]] = {"PREAMBLE": []}
     current = "PREAMBLE"
+
     for raw in (review_text or "").splitlines():
-        line = raw.strip()
-        if line in SECTION_HEADINGS:
-            current = line
+        probe = _strip_markdown(raw, strip_bullet=True)
+        probe_upper = probe.upper()
+
+        if probe_upper in SECTION_HEADINGS:
+            current = probe_upper
             sections.setdefault(current, [])
             continue
-        if line.startswith("DEVELOPMENTAL REVIEW"):
-            sections["TITLE"] = [line]
+
+        if probe_upper.startswith("DEVELOPMENTAL REVIEW"):
+            sections["TITLE"] = [probe]
             continue
-        if line.startswith("ASSESSMENT BASIS:"):
-            sections["ASSESSMENT BASIS"] = [line.split(":", 1)[1].strip()]
+
+        if probe_upper.startswith("ASSESSMENT BASIS:"):
+            sections["ASSESSMENT BASIS"] = [probe.split(":", 1)[1].strip()]
             continue
-        sections.setdefault(current, []).append(raw.rstrip())
+
+        normalized = _strip_markdown(raw, strip_bullet=False)
+        sections.setdefault(current, []).append(normalized)
+
     return sections
 
 
 def parse_behavior_evidence(lines: list[str]) -> list[dict[str, str]]:
-    """Parse marker/behavior blocks while preserving unstructured text when needed."""
+    """Parse MSR behavior blocks from plain text or markdown-formatted AI output."""
     rows: list[dict[str, str]] = []
     current: dict[str, str] | None = None
     field = "evidence"
@@ -66,18 +117,21 @@ def parse_behavior_evidence(lines: list[str]) -> list[dict[str, str]]:
         if current:
             for key in ("name", "status", "evidence", "development"):
                 current[key] = _clean(current.get(key, ""))
-            rows.append(current)
+            current["name"] = _display_name(current.get("name", ""))
+            if any(current.get(key) for key in ("name", "status", "evidence", "development")):
+                rows.append(current)
             current = None
 
     for raw in lines:
-        line = raw.strip()
+        line = _strip_markdown(raw, strip_bullet=True)
         if not line:
             continue
+
         match = STATUS_PATTERN.match(line)
         if match:
             flush()
             current = {
-                "name": match.group("name"),
+                "name": _display_name(match.group("name")),
                 "status": match.group("status").upper(),
                 "evidence": "",
                 "development": "",
@@ -86,6 +140,7 @@ def parse_behavior_evidence(lines: list[str]) -> list[dict[str, str]]:
             continue
 
         if current is None:
+            # Preserve unstructured text rather than dropping it.
             current = {
                 "name": "Review narrative",
                 "status": "",
@@ -98,6 +153,9 @@ def parse_behavior_evidence(lines: list[str]) -> list[dict[str, str]]:
             field = "evidence"
             line = line.split(":", 1)[1].strip()
         elif lower.startswith("development note:"):
+            field = "development"
+            line = line.split(":", 1)[1].strip()
+        elif lower.startswith("development opportunity:"):
             field = "development"
             line = line.split(":", 1)[1].strip()
 
@@ -118,19 +176,36 @@ def parse_competency_synthesis(lines: list[str]) -> list[dict[str, str]]:
         if current:
             for key in ("name", "strength", "evidence", "development"):
                 current[key] = _clean(current.get(key, ""))
-            rows.append(current)
+            current["name"] = _display_name(current.get("name", ""))
+            if any(current.get(key) for key in ("name", "strength", "evidence", "development")):
+                rows.append(current)
             current = None
 
     for raw in lines:
-        line = raw.strip()
+        line = _strip_markdown(raw, strip_bullet=True)
         if not line:
             continue
+
         match = COMPETENCY_PATTERN.match(line)
         if match:
             flush()
             current = {
-                "name": match.group("name"),
-                "strength": match.group("strength"),
+                "name": _display_name(match.group("name")),
+                "strength": _clean(match.group("strength")),
+                "evidence": "",
+                "development": "",
+            }
+            field = "evidence"
+            continue
+
+        # Some models use a status after the competency rather than the exact
+        # "Evidence strength:" wording. Preserve that as the strength column.
+        status_match = STATUS_PATTERN.match(line)
+        if status_match and "competency" in status_match.group("name").lower():
+            flush()
+            current = {
+                "name": _display_name(status_match.group("name")),
+                "strength": status_match.group("status").upper(),
                 "evidence": "",
                 "development": "",
             }
@@ -146,10 +221,10 @@ def parse_competency_synthesis(lines: list[str]) -> list[dict[str, str]]:
             }
 
         lower = line.lower()
-        if lower.startswith("observed evidence:"):
+        if lower.startswith("observed evidence:") or lower.startswith("evidence:"):
             field = "evidence"
             line = line.split(":", 1)[1].strip()
-        elif lower.startswith("development opportunity:"):
+        elif lower.startswith("development opportunity:") or lower.startswith("development note:"):
             field = "development"
             line = line.split(":", 1)[1].strip()
 
@@ -186,10 +261,10 @@ def _add_heading(doc: Document, text: str, level: int = 1):
 
 def _add_text_lines(doc: Document, lines: list[str]):
     for raw in lines:
-        line = raw.strip()
+        line = _strip_markdown(raw, strip_bullet=False)
         if not line:
             continue
-        if line.startswith(("- ", "• ", "* ")):
+        if line.startswith(("- ", "• ", "+ ")):
             paragraph = doc.add_paragraph(style="List Bullet")
             paragraph.add_run(line[2:].strip())
         else:
@@ -306,8 +381,10 @@ def export_review_docx(
 
     level = (level or "PCC").upper()
     sections = split_review_sections(review_text)
-    behavior_rows = parse_behavior_evidence(sections.get("MARKER / BEHAVIORAL EVIDENCE", []))
-    competency_rows = parse_competency_synthesis(sections.get("COMPETENCY SYNTHESIS", []))
+    behavior_lines = sections.get("MARKER / BEHAVIORAL EVIDENCE", [])
+    competency_lines = sections.get("COMPETENCY SYNTHESIS", [])
+    behavior_rows = parse_behavior_evidence(behavior_lines)
+    competency_rows = parse_competency_synthesis(competency_lines)
 
     doc = Document()
     _set_document_defaults(doc)
@@ -355,14 +432,17 @@ def export_review_docx(
     if behavior_rows:
         _add_behavior_table(doc, behavior_rows)
     else:
-        doc.add_paragraph("The generated review did not provide a parseable behavior-evidence table. The original review text is preserved below.")
-        _add_text_lines(doc, sections.get("MARKER / BEHAVIORAL EVIDENCE", []))
+        doc.add_paragraph(
+            "The generated review did not provide a parseable behavior-evidence table. "
+            "The original review text is preserved below."
+        )
+        _add_text_lines(doc, behavior_lines)
 
     _add_heading(doc, "Competency Synthesis", 1)
     if competency_rows:
         _add_competency_table(doc, competency_rows)
     else:
-        _add_text_lines(doc, sections.get("COMPETENCY SYNTHESIS", []))
+        _add_text_lines(doc, competency_lines)
 
     for heading in (
         "PATTERNS TO WATCH",
@@ -372,6 +452,17 @@ def export_review_docx(
     ):
         _add_heading(doc, heading.title(), 1)
         _add_text_lines(doc, sections.get(heading, []))
+
+    # If the provider changed formatting enough that the structured parse is sparse,
+    # preserve the complete generated review so the Word export never appears empty
+    # while the on-screen review contains useful content.
+    populated_sections = sum(
+        1 for heading in SECTION_HEADINGS if any(_clean(x) for x in sections.get(heading, []))
+    )
+    if not behavior_rows or populated_sections < 4:
+        _add_heading(doc, "Full Generated Review", 1)
+        paragraph = doc.add_paragraph()
+        paragraph.add_run(_strip_markdown(review_text, strip_bullet=False))
 
     disclaimer = doc.add_paragraph()
     disclaimer.paragraph_format.space_before = Pt(10)
