@@ -11,7 +11,7 @@ on:
         description: "Publish the installer to GitHub Releases"
         required: true
         type: boolean
-        default: false
+        default: true
   push:
     tags:
       - "v*"
