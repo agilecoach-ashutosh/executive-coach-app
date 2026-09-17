@@ -103,11 +103,20 @@ def review_animate(self):
 
 def _metric_row(self, parent, label, value, note=None):
     row = tk.Frame(parent, bg=base.PANEL)
-    row.pack(fill="x", pady=3)
+    row.pack(fill="x", pady=2)
     self.label(row, label, 9, base.MUTED).pack(side="left")
     self.label(row, value, 10, base.INK, "bold").pack(side="right")
     if note:
-        self.label(parent, note, 7, "#61748b").pack(anchor="w", pady=(0, 2))
+        tk.Label(
+            parent,
+            text=note,
+            bg=base.PANEL,
+            fg="#61748b",
+            font=("Segoe UI", 7),
+            justify="left",
+            anchor="w",
+            wraplength=238,
+        ).pack(fill="x", anchor="w", pady=(0, 2))
 
 
 def _close_review_dialog(self):
@@ -118,6 +127,53 @@ def _close_review_dialog(self):
     self._review_output = None
     self._review_generate_button = None
     self._review_export_button = None
+
+
+def _make_scrollable_review_sidebar(self, parent):
+    """Create a fixed-width review sidebar that can scroll on scaled/small displays."""
+    shell = tk.Frame(
+        parent,
+        bg=base.PANEL,
+        highlightbackground=base.BORDER,
+        highlightthickness=1,
+        width=315,
+    )
+    shell.pack(side="left", fill="y", padx=(0, 12))
+    shell.pack_propagate(False)
+
+    canvas = tk.Canvas(
+        shell,
+        bg=base.PANEL,
+        highlightthickness=0,
+        bd=0,
+        width=289,
+    )
+    scrollbar = tk.Scrollbar(shell, orient="vertical", command=canvas.yview)
+    canvas.configure(yscrollcommand=scrollbar.set)
+    scrollbar.pack(side="right", fill="y")
+    canvas.pack(side="left", fill="both", expand=True)
+
+    content = tk.Frame(canvas, bg=base.PANEL, padx=18, pady=14)
+    window_id = canvas.create_window((0, 0), window=content, anchor="nw")
+
+    def sync_scrollregion(_event=None):
+        canvas.configure(scrollregion=canvas.bbox("all"))
+
+    def fit_width(event):
+        # Keep a little room for the vertical scrollbar.
+        canvas.itemconfigure(window_id, width=max(250, event.width))
+
+    content.bind("<Configure>", sync_scrollregion)
+    canvas.bind("<Configure>", fit_width)
+
+    # Mouse wheel works when the pointer is over the sidebar itself. The visible
+    # scrollbar remains available at all times for child widgets and high DPI setups.
+    canvas.bind(
+        "<MouseWheel>",
+        lambda event: canvas.yview_scroll(int(-1 * (event.delta / 120)), "units"),
+    )
+
+    return content
 
 
 def show_session_review(self):
@@ -135,8 +191,8 @@ def show_session_review(self):
     self._review_dialog = dialog
     dialog.title("Coach Practice • Session Review")
     dialog.configure(bg=base.BG)
-    dialog.geometry("860x780")
-    dialog.minsize(760, 660)
+    dialog.geometry("940x820")
+    dialog.minsize(800, 680)
     dialog.transient(self)
 
     header = tk.Frame(dialog, bg=base.BG)
@@ -157,19 +213,12 @@ def show_session_review(self):
     body = tk.Frame(dialog, bg=base.BG)
     body.pack(fill="both", expand=True, padx=26, pady=(0, 18))
 
-    left = tk.Frame(
-        body,
-        bg=base.PANEL,
-        highlightbackground=base.BORDER,
-        highlightthickness=1,
-        padx=18,
-        pady=16,
-        width=285,
-    )
-    left.pack(side="left", fill="y", padx=(0, 12))
-    left.pack_propagate(False)
+    # The left sidebar used to be a fixed non-scrollable frame. At 125%/150%
+    # Windows scaling its lower controls were clipped. Keep the same visual style
+    # but make the content independently scrollable.
+    left = _make_scrollable_review_sidebar(self, body)
 
-    self.label(left, "Session metrics", 12, base.INK, "bold").pack(anchor="w", pady=(0, 10))
+    self.label(left, "Session metrics", 12, base.INK, "bold").pack(anchor="w", pady=(0, 8))
     _metric_row(self, left, "Duration", format_duration(metrics.duration_seconds))
     _metric_row(
         self,
@@ -192,8 +241,8 @@ def show_session_review(self):
     _metric_row(self, left, "Longest coach turn", f"{metrics.longest_coach_turn_words} words")
     _metric_row(self, left, "Interruption notes", str(metrics.interruptions))
 
-    tk.Frame(left, bg=base.BORDER, height=1).pack(fill="x", pady=14)
-    self.label(left, "Review against", 10, base.INK, "bold").pack(anchor="w", pady=(0, 7))
+    tk.Frame(left, bg=base.BORDER, height=1).pack(fill="x", pady=(10, 10))
+    self.label(left, "Review against", 10, base.INK, "bold").pack(anchor="w", pady=(0, 5))
 
     for level in ("ACC", "PCC", "MCC"):
         tk.Radiobutton(
@@ -207,31 +256,41 @@ def show_session_review(self):
             activebackground=base.PANEL,
             activeforeground=base.INK,
             font=("Segoe UI", 9, "bold"),
-        ).pack(anchor="w", pady=2)
+        ).pack(anchor="w", pady=1)
 
-    self.label(
-        left,
-        "Developmental AI review only — not an official ICF score, assessment, or pass/fail decision.",
-        8,
-        "#71849a",
-    ).pack(anchor="w", pady=(12, 10))
-
+    # Keep the actions together and above the disclaimer so they stay easy to find.
     self._review_generate_button = self.button(
         left,
         "Generate coaching review",
         self.generate_coaching_review,
         True,
     )
-    self._review_generate_button.pack(fill="x", pady=(4, 6))
-    self.button(left, "Export transcript", self.save, compact=True).pack(fill="x", pady=4)
+    self._review_generate_button.pack(fill="x", pady=(10, 5))
+
+    self.button(left, "Export transcript", self.save, compact=True).pack(fill="x", pady=3)
+
     self._review_export_button = self.button(
         left,
         "Export review",
         self.export_coaching_review,
         compact=True,
     )
-    self._review_export_button.pack(fill="x", pady=4)
+    self._review_export_button.pack(fill="x", pady=3)
     self._review_export_button.configure(state="normal" if self.practice_review_text else "disabled")
+
+    tk.Label(
+        left,
+        text=(
+            "Developmental AI review only — not an official ICF score, assessment, "
+            "credential-readiness decision, or pass/fail result."
+        ),
+        bg=base.PANEL,
+        fg="#71849a",
+        font=("Segoe UI", 7),
+        justify="left",
+        anchor="w",
+        wraplength=238,
+    ).pack(fill="x", anchor="w", pady=(9, 4))
 
     right = tk.Frame(
         body,
