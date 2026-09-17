@@ -6,6 +6,11 @@ It supports two experiences:
 - **I am a Coachee** — Presence acts as the coach.
 - **I am a Coach** — the user coaches a simulated professional coachee with hidden scenario context, then reviews the session.
 
+Presence now supports two cloud AI providers:
+
+- **Google Gemini** — native Gemini Live audio conversation.
+- **Groq** — turn-based voice using Groq Whisper speech-to-text, a Groq-hosted LLM, and Groq Orpheus text-to-speech.
+
 Repository: https://github.com/agilecoach-ashutosh/executive-coach-app
 
 **Status: runnable source prototype, not a verified Windows release.** Live cloud
@@ -19,26 +24,76 @@ and generated coaching feedback still require real-world testing.
    including the Python launcher. Python 3.12 can coexist with newer Python versions.
    Alternatively run `winget install -e --id Python.Python.3.12`.
 3. Double-click **Setup.cmd**. It creates `.venv`, installs dependencies, and creates
-   a desktop shortcut that launches the current Coach/Coachee + Review experience.
+   a desktop shortcut.
 4. Open **Presence Coach** from the desktop or double-click **Start.cmd**.
-5. Open **Settings** and enter a Gemini API key.
-6. Choose microphone/speaker devices, enable session consent, then begin.
-
-### Get a Gemini API key
-
-1. Sign in to Google AI Studio: https://aistudio.google.com/
-2. Open the Gemini API key page: https://aistudio.google.com/apikey
-3. Create a key for an available project.
-4. Copy the key and paste it into **Presence → Settings**.
-5. Optionally choose **Remember key** to store it through Windows Credential Manager.
+5. Open **Settings → AI provider** and choose **Google Gemini** or **Groq**.
+6. Add the matching API key, choose microphone/speaker devices, enable session consent,
+   then begin.
 
 Do not place API keys in GitHub, screenshots, exported transcripts, or messages.
-Google controls API availability, quotas, pricing, and model access.
+Provider availability, quotas, rate limits, and pricing are controlled by Google or Groq.
 
-The live conversation defaults to `gemini-3.1-flash-live-preview`. The settings also
-allow another Live AUDIO model. A normal text-only model cannot replace the live
-conversation transport. Post-session developmental reviews use a separate text call,
-currently preferring `gemini-3.8-flash` with `gemini-2.5-flash` as a fallback.
+## Get a Google Gemini API key
+
+1. Open Google AI Studio: https://aistudio.google.com/
+2. Sign in with your Google account.
+3. Open the API Keys page directly: https://aistudio.google.com/apikey
+4. Choose **Create API key** and select/create a Google Cloud project if prompted.
+5. Copy the generated key.
+6. In Presence, open **Settings → AI provider → Google Gemini**.
+7. Paste the key into **Gemini API key**.
+8. Optionally enable **Remember key securely in Windows Credential Manager**.
+
+The live Gemini conversation defaults to `gemini-3.1-flash-live-preview`. Model
+availability is provider-controlled and may change.
+
+## Get a Groq API key
+
+1. Open GroqCloud Console: https://console.groq.com/
+2. Sign in or create a Groq account.
+3. Open the API Keys page directly: https://console.groq.com/keys
+4. Click **Create API Key**.
+5. Give the key a name such as **Presence Coach**.
+6. Create the key and copy it immediately. Groq keys normally begin with `gsk_`.
+7. In Presence, open **Settings → AI provider → Groq**.
+8. Paste the key into **Groq API key**.
+9. Optionally enable **Remember key securely in Windows Credential Manager**.
+
+The default Groq pipeline is:
+
+```text
+Microphone
+   ↓
+whisper-large-v3-turbo
+Speech → text
+   ↓
+openai/gpt-oss-120b
+Coaching / simulated-coachee response
+   ↓
+canopylabs/orpheus-v1-english
+Text → speech
+   ↓
+Speaker / headphones
+```
+
+Groq Whisper and the conversation model are multilingual. The current Groq Orpheus
+voice model used by Presence is **English-only**, so Groq voice sessions instruct the
+AI to speak its responses in English. Gemini remains the better option when spoken
+Hindi/Hinglish output is important.
+
+The Groq settings currently allow:
+
+- Chat models: `openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `llama-3.3-70b-versatile`
+- Speech recognition: `whisper-large-v3-turbo`, `whisper-large-v3`
+- English Orpheus voices: `troy`, `austin`, `daniel`, `autumn`, `diana`, `hannah`
+
+## In-app API-key help
+
+Click the **ⓘ** button in the Presence top bar or **How to get a key ↗** in Settings.
+The help window contains separate instructions and direct buttons for:
+
+- **Gemini API Keys** → https://aistudio.google.com/apikey
+- **Groq API Keys** → https://console.groq.com/keys
 
 ## Mode 1 — I am a Coachee
 
@@ -93,11 +148,13 @@ ICF scoring criteria.
 ### ACC / PCC / MCC developmental review
 
 Choose **ACC**, **PCC**, or **MCC**, then click **Generate coaching review**.
-`reviewer.py` sends only the visible Coach/Coachee transcript, visible scenario brief,
-and local metrics to a separate text-model review call. The reviewer does **not**
-receive the hidden simulated-client persona.
+The reviewer receives only the visible Coach/Coachee transcript, visible scenario
+brief, and local metrics. It does **not** receive the hidden simulated-client persona.
 
-The generated review covers:
+When Gemini is the selected provider, the review uses Gemini text generation. When
+Groq is selected, the review uses the selected Groq chat model.
+
+The review covers:
 
 - What the coach did well, with transcript evidence
 - Establishes and Maintains Agreements
@@ -137,7 +194,7 @@ responsive.
 | I'm ready | Finishes the current active spoken turn. |
 | Interrupt | Stops local AI playback and gives the human the floor. |
 | Mute | Stops new microphone input. |
-| End | Disconnects the live session and preserves the transcript in memory. |
+| End | Disconnects the session and preserves the transcript in memory. |
 | Send | Sends typed input into the connected conversation. |
 | Export transcript | Saves a timestamped UTF-8 text transcript. |
 
@@ -147,14 +204,20 @@ Background noise can therefore affect turn detection. Headphones are recommended
 
 ## Privacy and keys
 
-- Audio and typed live-conversation data are processed by Google Gemini when using the current provider.
-- Post-session AI review sends the visible transcript and descriptive metrics to Gemini only when the user explicitly requests a review.
+- With **Gemini**, live audio/text is processed by Google Gemini.
+- With **Groq**, spoken turns are sent to Groq Whisper for transcription; conversation
+  text is sent to the selected Groq chat model; AI response text is sent to Groq
+  Orpheus for English speech generation.
+- Post-session AI review sends the visible transcript and descriptive metrics only
+  when the user explicitly requests a review, using the currently selected provider.
 - Conversations remain in application memory unless exported.
 - Exported transcript/review files are ordinary unencrypted text files.
-- The app does not currently store raw audio recordings on disk.
-- No webcam, screen capture, computer-control agent, wake-word listener, or automatic transcript upload is included.
+- The app does not currently store raw session recordings on disk. Temporary WAV
+  files used by the Groq turn pipeline are deleted after STT/TTS processing.
+- No webcam, screen capture, computer-control agent, wake-word listener, or automatic
+  transcript upload is included.
 - Saved API keys use the OS keyring (Windows Credential Manager on Windows).
-- **Forget saved key** removes the saved credential entry when available.
+- **Forget saved key** removes the saved credential for the currently selected provider.
 
 Starting a new session resets model context. There is no guaranteed hidden
 cross-session memory or automatic session resumption. A crash can lose text that has
@@ -163,41 +226,48 @@ not been exported.
 ## Current source structure
 
 ```text
-app.py              Base Tkinter UI and Gemini session controls
+app.py              Base Tkinter UI and Gemini settings/session controls
+engine.py           Gemini Live audio transport
 launch.py           Performance-optimized orb/dialog layer
 practice_mode.py    Coach/Coachee role selection and AI coachee mode
-practice_review.py  Post-session metrics/review UI and current application entry point
+practice_review.py  Post-session metrics/review UI
+provider_mode.py    Gemini/Groq provider selection and current application entry point
+groq_engine.py      Groq Whisper → LLM → Orpheus turn-based voice engine
 coaching.py         Presence-as-coach behavioural instructions and Transcript model
 scenarios.py        Simulated professional coachee scenarios and hidden persona prompts
-reviewer.py         Local metrics + ACC/PCC/MCC developmental review prompt/call
-engine.py           Gemini Live audio transport and turn handling
+reviewer.py         Local metrics + ACC/PCC/MCC developmental review prompt
 ```
 
-`Start.cmd`, the Setup desktop shortcut, and the Windows packaging workflow now use
-`practice_review.py` as the application entry point.
+`Start.cmd`, the Setup desktop shortcut, and the Windows packaging workflow use
+`provider_mode.py` as the application entry point.
 
 ## Updating an existing source installation
 
-The safest update path is:
+Run:
 
 ```powershell
 git pull
 ```
 
-Then fully close any running Presence process and reopen it with **Start.cmd**.
-If dependencies change in a future update, rerun **Setup.cmd**.
+Because Groq adds a new Python dependency, existing installations should then run:
+
+```powershell
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+Or rerun **Setup.cmd**. Then fully close Presence and reopen it with **Start.cmd**.
 
 ## Create a Windows installer
 
 Open **Actions → Build Windows installer → Run workflow**. The workflow installs
-Python dependencies, runs the automated tests, packages `practice_review.py` with
-PyInstaller, and builds an Inno Setup installer artifact.
+Python dependencies, runs automated tests, packages `provider_mode.py` with PyInstaller,
+and builds an Inno Setup installer artifact.
 
 For a local build with Python 3.12 and Inno Setup 6 installed:
 
 ```powershell
 py -3.12 -m pip install -r requirements.txt pyinstaller
-py -3.12 -m PyInstaller --noconfirm --windowed --name PresenceCoach --collect-all sounddevice --collect-all google.genai --hidden-import keyring.backends.Windows practice_review.py
+py -3.12 -m PyInstaller --noconfirm --windowed --name PresenceCoach --collect-all sounddevice --collect-all google.genai --collect-all groq --hidden-import keyring.backends.Windows provider_mode.py
 & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer.iss
 ```
 
@@ -211,16 +281,18 @@ Run:
 python -m unittest discover -s tests -v
 ```
 
-Automated tests cover coaching turn policy, transport behaviours, transcript handling,
-and Coach Practice review metrics. Hardware mocks are used for transport tests; these
-are not end-to-end live voice tests and do not establish coaching quality.
+Automated tests cover coaching turn policy, Gemini transport behaviours, transcript
+handling, Coach Practice review metrics, and deterministic Groq helper behaviour.
+Hardware mocks are used for transport tests; these are not end-to-end live voice tests
+and do not establish coaching quality.
 
 Before calling this a release, test on a clean Windows 11 installation at common
-Windows display scales, with real microphones/speakers, live Gemini quotas, network
-failure, English/Hindi/Hinglish sessions, long pauses, interruption, transcript export,
-Coach Practice scenarios, and ACC/PCC/MCC review generation.
+Windows display scales, with real microphones/speakers, live Gemini and Groq quotas,
+network failure, English sessions, pauses, interruption, transcript export, Coach
+Practice scenarios, and ACC/PCC/MCC review generation. Test Hindi/Hinglish spoken
+output with Gemini separately because current Groq Orpheus output is English-only.
 
-## ICF-related design references
+## References
 
 Presence uses ICF material as a developmental reference, not as an endorsement or
 claim of assessment authority.
@@ -230,6 +302,10 @@ claim of assessment authority.
 - PCC Minimum Skills Requirements: https://coachingfederation.org/resource/pcc-minimum-skills-requirements/
 - MCC Minimum Skills Requirements: https://coachingfederation.org/resource/mcc-minimum-skills-requirements/
 - Gemini Live API: https://ai.google.dev/gemini-api/docs/live-api
+- Groq Quickstart: https://console.groq.com/docs/quickstart
+- Groq Speech to Text: https://console.groq.com/docs/speech-to-text
+- Groq Text to Speech: https://console.groq.com/docs/text-to-speech
+- Groq supported models: https://console.groq.com/docs/models
 
 See `reference/ICF-PRACTICE-DESIGN.md`, `COACHING-REVIEW.md`, and
 `reference/AGILE-ORBIT-INTEGRATION.md` for the product's coaching-design notes and
