@@ -7,8 +7,12 @@ import tkinter as tk
 import app as base
 
 
+AI_STUDIO_URL = 'https://aistudio.google.com/'
+API_KEY_URL = 'https://aistudio.google.com/apikey'
+
+
 def build_orb(self):
-    """Build a visually rich orb with less Canvas overhead."""
+    """Build the premium orb with lower Canvas overhead."""
     self._animation_frame = 0
     self._star_layout_size = None
 
@@ -57,7 +61,7 @@ def build_orb(self):
 
 
 def animate(self):
-    """Animate efficiently so UI controls remain immediately responsive."""
+    """Animate efficiently so UI controls remain responsive."""
     self._animation_frame = getattr(self, '_animation_frame', 0) + 1
     frame = self._animation_frame
 
@@ -85,7 +89,6 @@ def animate(self):
     tilt = .28 * math.sin(t * .7)
     ct, st = math.cos(tilt), math.sin(tilt)
 
-    # Stars are static; only reposition when the Canvas size changes.
     layout_size = (w, h)
     if self._star_layout_size != layout_size:
         for item, fx, fy, size in self.stars:
@@ -123,7 +126,6 @@ def animate(self):
         bright = (depth + 1) / 2
         size = .7 + bright * 1.35 + power * .55
         c.coords(item, px - size, py - size, px + size, py + size)
-
         if recolor:
             color = '#%02x%02x%02x' % (
                 int(95 + 160 * bright),
@@ -132,7 +134,6 @@ def animate(self):
             )
             c.itemconfigure(item, fill=color)
 
-    # 41 points is visually smooth but materially cheaper than the old 61.
     for j, item in enumerate(self.filaments):
         points = []
         for k in range(41):
@@ -156,44 +157,35 @@ def animate(self):
 
     raw_state = self.state.get()
     if playing:
-        label = 'Presence is speaking'
-        hint = 'Notice what lands.'
+        label, hint = 'Presence is speaking', 'Notice what lands.'
     elif live and self.muted.get():
-        label = 'Microphone muted'
-        hint = 'Unmute when you’re ready to continue.'
+        label, hint = 'Microphone muted', 'Unmute when you’re ready to continue.'
     elif listening and self.hold.get():
-        label = 'Listening'
-        hint = 'Take all the time you need. I’ll wait.'
+        label, hint = 'Listening', 'Take all the time you need. I’ll wait.'
     elif listening:
-        label = 'Listening'
-        hint = 'I’m here.'
+        label, hint = 'Listening', 'I’m here.'
     elif raw_state.startswith('Connecting'):
-        label = 'Connecting'
-        hint = 'Preparing your coaching space.'
+        label, hint = 'Connecting', 'Preparing your coaching space.'
     elif raw_state.startswith('Stopping'):
-        label = 'Closing the session'
-        hint = 'Your transcript will remain available.'
+        label, hint = 'Closing the session', 'Your transcript will remain available.'
     elif raw_state == 'Session complete':
-        label = 'Session complete'
-        hint = 'Keep what is useful. Leave what is not.'
+        label, hint = 'Session complete', 'Keep what is useful. Leave what is not.'
     elif live:
         label = raw_state.replace('…', '').strip() or 'Thinking'
         hint = 'Presence is with your last thought.'
     else:
-        label = 'Ready when you are'
-        hint = 'A quiet space for whatever matters.'
+        label, hint = 'Ready when you are', 'A quiet space for whatever matters.'
 
     if self.display_state.get() != label:
         self.display_state.set(label)
     if self.display_hint.get() != hint:
         self.display_hint.set(hint)
 
-    # 20 fps remains fluid for this ambient orb and leaves Tk time for clicks/dialogs.
     self.after(50, self.animate)
 
 
 def api_help(self):
-    # Use Settings as the parent only when Settings is actually visible.
+    """Show fast Gemini setup help with distinct home and API-key destinations."""
     settings_visible = (
         hasattr(self, 'settings')
         and self.settings.winfo_exists()
@@ -230,7 +222,7 @@ def api_help(self):
 
     for number, text in [
         ('1', 'Open Google AI Studio and sign in.'),
-        ('2', 'Open API keys and create a key.'),
+        ('2', 'Open the API Keys page and create a key.'),
         ('3', 'Copy the key.'),
         ('4', 'Paste it into Presence → Settings.'),
     ]:
@@ -257,19 +249,18 @@ def api_help(self):
 
     self.button(
         dialog,
-        'Open Google AI Studio ↗',
-        lambda: webbrowser.open('https://aistudio.google.com/'),
+        'Open AI Studio home ↗',
+        lambda: webbrowser.open(AI_STUDIO_URL),
         True,
     ).pack(fill='x', padx=24, pady=4)
     self.button(
         dialog,
-        'Open API keys ↗',
-        lambda: webbrowser.open('https://aistudio.google.com/api-keys'),
+        'Open Gemini API Keys ↗',
+        lambda: webbrowser.open(API_KEY_URL),
     ).pack(fill='x', padx=24, pady=4)
     self.button(dialog, 'Close', dialog.destroy, compact=True).pack(pady=(8, 18))
     dialog.bind('<Escape>', lambda _: dialog.destroy())
 
-    # Give the help window focus immediately.
     dialog.update_idletasks()
     dialog.lift()
     dialog.focus_force()
