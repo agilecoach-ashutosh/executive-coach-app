@@ -16,28 +16,59 @@ base = practice.base
 _original_init = base.App.__init__
 _original_start = base.App.start
 _original_animate = base.App.animate
+_original_select_coachee_mode = base.App.select_coachee_mode
+_original_select_scenario = base.App.select_scenario
 
 
 def review_init(self):
+    # Build the real Tk root first; Tk variables cannot safely exist before this.
+    _original_init(self)
+
     self.practice_session_started_at = None
     self.practice_session_ended_at = None
     self.practice_review_shown = False
     self.practice_review_text = ""
-    self.practice_review_level = tk.StringVar(value="PCC")
+    self.practice_review_level = tk.StringVar(master=self, value="PCC")
     self._review_queue = queue.Queue()
     self._review_dialog = None
     self._review_output = None
     self._review_generate_button = None
     self._review_export_button = None
-    _original_init(self)
+
+    self.review_button = self.button(
+        self.header,
+        "Review",
+        self.show_session_review,
+        compact=True,
+    )
+    self.review_button.pack(side="right", padx=(4, 0), pady=8)
+    self.review_button.configure(state="disabled")
+
+
+def _clear_review_state(self):
+    self.practice_session_started_at = None
+    self.practice_session_ended_at = None
+    self.practice_review_shown = False
+    self.practice_review_text = ""
+    if hasattr(self, "review_button"):
+        self.review_button.configure(state="disabled")
+
+
+def review_select_coachee_mode(self, dialog=None):
+    result = _original_select_coachee_mode(self, dialog)
+    _clear_review_state(self)
+    return result
+
+
+def review_select_scenario(self, scenario, dialog=None):
+    result = _original_select_scenario(self, scenario, dialog)
+    _clear_review_state(self)
+    return result
 
 
 def review_start(self):
     if getattr(self, "practice_mode", "coachee") == "coach":
-        self.practice_session_started_at = None
-        self.practice_session_ended_at = None
-        self.practice_review_shown = False
-        self.practice_review_text = ""
+        _clear_review_state(self)
     return _original_start(self)
 
 
@@ -65,6 +96,8 @@ def review_animate(self):
     ):
         self.practice_session_ended_at = time.monotonic()
         self.practice_review_shown = True
+        if hasattr(self, "review_button"):
+            self.review_button.configure(state="normal")
         self.after(300, self.show_session_review)
 
 
@@ -77,8 +110,18 @@ def _metric_row(self, parent, label, value, note=None):
         self.label(parent, note, 7, "#61748b").pack(anchor="w", pady=(0, 2))
 
 
+def _close_review_dialog(self):
+    dialog = self._review_dialog
+    if dialog and dialog.winfo_exists():
+        dialog.destroy()
+    self._review_dialog = None
+    self._review_output = None
+    self._review_generate_button = None
+    self._review_export_button = None
+
+
 def show_session_review(self):
-    if getattr(self, "practice_mode", "coachee") != "coach":
+    if getattr(self, "practice_mode", "coachee") != "coach" or not self.transcript.rows:
         return
 
     if self._review_dialog and self._review_dialog.winfo_exists():
@@ -99,7 +142,7 @@ def show_session_review(self):
     header = tk.Frame(dialog, bg=base.BG)
     header.pack(fill="x", padx=26, pady=(22, 8))
     self.label(header, "SESSION COMPLETE", 18, base.AMBER, "bold").pack(side="left")
-    self.button(header, "Close", dialog.destroy, compact=True).pack(side="right")
+    self.button(header, "Close", self._close_review_dialog, compact=True).pack(side="right")
 
     scenario = getattr(self, "current_scenario", None)
     if scenario:
@@ -237,8 +280,8 @@ def show_session_review(self):
         )
     output.configure(state="disabled")
 
-    dialog.protocol("WM_DELETE_WINDOW", dialog.destroy)
-    dialog.bind("<Escape>", lambda _: dialog.destroy())
+    dialog.protocol("WM_DELETE_WINDOW", self._close_review_dialog)
+    dialog.bind("<Escape>", lambda _: self._close_review_dialog())
     dialog.update_idletasks()
     dialog.lift()
     dialog.focus_force()
@@ -259,7 +302,10 @@ def generate_coaching_review(self):
     if not self.transcript.rows:
         messagebox.showinfo("Review", "There is no practice transcript to review.")
         return
-    if not self.key.get().strip():
+
+    # Capture all Tk-backed values on the UI thread before starting the worker.
+    api_key = self.key.get().strip()
+    if not api_key:
         messagebox.showinfo("Review", "A Gemini API key is required to generate the review.")
         return
 
@@ -268,7 +314,8 @@ def generate_coaching_review(self):
     rows = list(self.transcript.rows)
     scenario = self.current_scenario
 
-    self._review_generate_button.configure(state="disabled", text="Reviewing…")
+    if self._review_generate_button and self._review_generate_button.winfo_exists():
+        self._review_generate_button.configure(state="disabled", text="Reviewing…")
     _set_review_output(
         self,
         f"Reviewing this transcript against the {level} developmental lens…\n\n"
@@ -277,13 +324,7 @@ def generate_coaching_review(self):
 
     def worker():
         try:
-            result = generate_review(
-                self.key.get().strip(),
-                level,
-                rows,
-                metrics,
-                scenario,
-            )
+            result = generate_review(api_key, level, rows, metrics, scenario)
             self._review_queue.put(("ok", result))
         except Exception as exc:
             self._review_queue.put(("error", str(exc)))
@@ -296,8 +337,7 @@ def _poll_review_result(self):
     try:
         status, value = self._review_queue.get_nowait()
     except queue.Empty:
-        if self._review_generate_button and self._review_generate_button.winfo_exists():
-            self.after(120, self._poll_review_result)
+        self.after(120, self._poll_review_result)
         return
 
     if self._review_generate_button and self._review_generate_button.winfo_exists():
@@ -313,10 +353,13 @@ def _poll_review_result(self):
             self,
             "Review generation failed. Your transcript is still available.\n\n" + value,
         )
+        parent = self
+        if self._review_dialog and self._review_dialog.winfo_exists():
+            parent = self._review_dialog
         messagebox.showerror(
             "Review generation failed",
             value + "\n\nCheck API key, quota, internet access, and model availability.",
-            parent=self._review_dialog if self._review_dialog and self._review_dialog.winfo_exists() else self,
+            parent=parent,
         )
 
 
@@ -326,8 +369,11 @@ def export_coaching_review(self):
         return
 
     level = self.practice_review_level.get().upper()
+    parent = self
+    if self._review_dialog and self._review_dialog.winfo_exists():
+        parent = self._review_dialog
     filename = filedialog.asksaveasfilename(
-        parent=self._review_dialog if self._review_dialog and self._review_dialog.winfo_exists() else self,
+        parent=parent,
         defaultextension=".txt",
         initialfile=f"Presence-Coach-{level}-practice-review.txt",
         filetypes=[("Text file", "*.txt")],
@@ -343,13 +389,16 @@ def export_coaching_review(self):
     try:
         Path(filename).write_text(header + self.practice_review_text + "\n", encoding="utf-8")
     except OSError as exc:
-        messagebox.showerror("Export failed", str(exc))
+        messagebox.showerror("Export failed", str(exc), parent=parent)
 
 
 base.App.__init__ = review_init
 base.App.start = review_start
 base.App.animate = review_animate
+base.App.select_coachee_mode = review_select_coachee_mode
+base.App.select_scenario = review_select_scenario
 base.App.show_session_review = show_session_review
+base.App._close_review_dialog = _close_review_dialog
 base.App.generate_coaching_review = generate_coaching_review
 base.App._poll_review_result = _poll_review_result
 base.App.export_coaching_review = export_coaching_review
