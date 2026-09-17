@@ -13,8 +13,13 @@ from typing import Iterable
 from google import genai
 
 
-REVIEW_MODEL = "gemini-3.8-flash"
-FALLBACK_REVIEW_MODEL = "gemini-2.5-flash"
+# Keep review models on current stable Gemini text models that are broadly available,
+# including free-tier access where Google currently offers it. Avoid retired 2.5 IDs.
+REVIEW_MODELS = (
+    "gemini-3.6-flash",
+    "gemini-3.5-flash",
+    "gemini-3.5-flash-lite",
+)
 
 
 @dataclass
@@ -210,19 +215,23 @@ TRANSCRIPT
 def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, scenario=None) -> str:
     prompt = build_review_prompt(level, rows, metrics, scenario)
     client = genai.Client(api_key=api_key)
-    last_error = None
+    errors = []
     try:
-        for model in (REVIEW_MODEL, FALLBACK_REVIEW_MODEL):
+        for model in REVIEW_MODELS:
             try:
                 response = client.models.generate_content(model=model, contents=prompt)
                 text = (getattr(response, "text", None) or "").strip()
                 if text:
                     return text
+                errors.append(f"{model}: returned no text")
             except Exception as exc:  # provider errors vary by SDK version/account
-                last_error = exc
-        if last_error:
-            raise last_error
-        raise RuntimeError("The review model returned no text.")
+                errors.append(f"{model}: {exc}")
+
+        detail = "\n\n".join(errors[-3:]) if errors else "No model returned text."
+        raise RuntimeError(
+            "Gemini coaching review could not be generated with the current stable review models.\n\n"
+            + detail
+        )
     finally:
         try:
             client.close()
