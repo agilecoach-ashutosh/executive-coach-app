@@ -8,7 +8,6 @@ from __future__ import annotations
 
 import collections
 import io
-import math
 import os
 import queue
 import re
@@ -22,6 +21,7 @@ import sounddevice as sd
 from groq import Groq
 
 from coaching import TurnGate
+from session_export import SessionAudioRecorder
 
 
 DEFAULT_CHAT_MODEL = "openai/gpt-oss-120b"
@@ -132,6 +132,8 @@ class GroqEngine(threading.Thread):
         self.playback_until = 0.0
         self.client = None
         self.messages = [{"role": "system", "content": system_prompt}]
+        self.recorder = SessionAudioRecorder()
+        self.recorder.start(time.monotonic())
 
     def emit(self, kind, value=""):
         self.events.put((kind, value))
@@ -147,11 +149,19 @@ class GroqEngine(threading.Thread):
         self.output_level = 0.0
         self.playback_until = 0.0
 
+    def has_audio(self):
+        return self.recorder.has_audio()
+
+    def export_audio(self, filename):
+        self.recorder.export_mp3(filename)
+
     def capture(self, data, frames, timing, status):
         if self.stopping.is_set() or self.muted or self.generating:
             return
+        pcm = bytes(data)
+        self.recorder.append(pcm, 16000, 1, now=time.monotonic())
         try:
-            self.audio_in.put_nowait(bytes(data))
+            self.audio_in.put_nowait(pcm)
         except queue.Full:
             self.emit("error", "Audio input cannot keep up. Stop and reconnect.")
             self.stop()
@@ -403,5 +413,7 @@ class GroqEngine(threading.Thread):
                         float(np.sqrt(np.mean(samples ** 2))) / 32768 if len(samples) else 0.0
                     )
                     frames = max(1, len(data) // (2 * channels))
-                    self.playback_until = time.monotonic() + frames / sample_rate + .06
+                    now = time.monotonic()
+                    self.recorder.append(data, sample_rate, channels, now=now)
+                    self.playback_until = now + frames / sample_rate + .06
                     stream.write(data)
