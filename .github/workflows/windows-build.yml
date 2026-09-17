@@ -11,9 +11,14 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Prepare Presence icon
+        shell: pwsh
+        run: |
+          $b64 = Get-Content "assets/presence.ico.b64" -Raw
+          [IO.File]::WriteAllBytes("assets/presence.ico", [Convert]::FromBase64String($b64.Trim()))
       - run: python -m pip install -r requirements.txt pyinstaller
       - run: python -m unittest discover -s tests -v
-      - run: python -m PyInstaller --noconfirm --windowed --name PresenceCoach --collect-all sounddevice --collect-all google.genai --collect-all groq --collect-all docx --collect-all lameenc --hidden-import keyring.backends.Windows session_export_mode.py
+      - run: python -m PyInstaller --noconfirm --windowed --name PresenceCoach --icon assets/presence.ico --add-data "assets/presence.ico;assets" --collect-all sounddevice --collect-all google.genai --collect-all groq --collect-all docx --collect-all lameenc --hidden-import keyring.backends.Windows session_export_mode.py
       - name: Compile installer
         shell: pwsh
         run: |
