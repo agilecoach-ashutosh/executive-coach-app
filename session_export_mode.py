@@ -7,6 +7,7 @@ from tkinter import filedialog, messagebox
 
 import provider_mode as provider
 import practice_review as review
+from review_export import export_review_docx
 from session_export import export_transcript_docx, format_elapsed
 
 
@@ -55,15 +56,19 @@ review._make_scrollable_review_sidebar = _capture_review_sidebar
 base.Transcript = ElapsedTranscript
 
 
+def _review_parent(self):
+    parent = self
+    if getattr(self, "_review_dialog", None) and self._review_dialog.winfo_exists():
+        parent = self._review_dialog
+    return parent
+
+
 def export_transcript_word(self):
     if not self.transcript.rows:
         messagebox.showinfo("Transcript", "There is no conversation to export yet.")
         return False
 
-    parent = self
-    if getattr(self, "_review_dialog", None) and self._review_dialog.winfo_exists():
-        parent = self._review_dialog
-
+    parent = _review_parent(self)
     filename = filedialog.asksaveasfilename(
         parent=parent,
         defaultextension=".docx",
@@ -90,17 +95,14 @@ def export_transcript_word(self):
 
 def export_session_audio(self):
     engine = getattr(self, "engine", None)
+    parent = _review_parent(self)
     if not engine or not hasattr(engine, "has_audio") or not engine.has_audio():
         messagebox.showinfo(
             "Session audio",
             "No recorded session audio is available. Audio export is available for sessions started after this feature was installed.",
-            parent=getattr(self, "_review_dialog", None) or self,
+            parent=parent,
         )
         return False
-
-    parent = self
-    if getattr(self, "_review_dialog", None) and self._review_dialog.winfo_exists():
-        parent = self._review_dialog
 
     filename = filedialog.asksaveasfilename(
         parent=parent,
@@ -125,6 +127,43 @@ def export_session_audio(self):
     return True
 
 
+def export_coaching_review_word(self):
+    if not getattr(self, "practice_review_text", ""):
+        messagebox.showinfo("Review", "Generate a coaching review first.")
+        return False
+
+    level = self.practice_review_level.get().upper()
+    parent = _review_parent(self)
+    filename = filedialog.asksaveasfilename(
+        parent=parent,
+        defaultextension=".docx",
+        initialfile=f"Presence-Coach-{level}-practice-review.docx",
+        filetypes=[("Word document", "*.docx")],
+    )
+    if not filename:
+        return False
+
+    try:
+        metrics = review._current_metrics(self)
+        export_review_docx(
+            self.practice_review_text,
+            filename,
+            level,
+            metrics,
+            getattr(self, "current_scenario", None),
+        )
+    except Exception as exc:
+        messagebox.showerror("Review export failed", str(exc), parent=parent)
+        return False
+
+    messagebox.showinfo(
+        "Review exported",
+        "The developmental review was saved as a structured Word report with session metrics and ICF behavior-evidence tables.",
+        parent=parent,
+    )
+    return True
+
+
 def show_session_review_with_exports(self):
     _original_show_session_review(self)
 
@@ -132,11 +171,14 @@ def show_session_review_with_exports(self):
     if not sidebar or not sidebar.winfo_exists():
         return
 
-    # Clarify that transcript export is now a Word document.
+    # Clarify Word export formats on the existing review controls.
     for child in sidebar.winfo_children():
         try:
-            if child.cget("text") == "Export transcript":
+            text = child.cget("text")
+            if text == "Export transcript":
                 child.configure(text="Export transcript (.docx)")
+            elif text == "Export review":
+                child.configure(text="Export review (.docx)")
         except (tk.TclError, AttributeError):
             pass
 
@@ -169,6 +211,7 @@ def show_session_review_with_exports(self):
 base.App.save = export_transcript_word
 base.App.export_transcript_word = export_transcript_word
 base.App.export_session_audio = export_session_audio
+base.App.export_coaching_review = export_coaching_review_word
 base.App.show_session_review = show_session_review_with_exports
 
 
