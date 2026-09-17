@@ -1,60 +1,52 @@
 """Windows-only setup helpers for Presence Coach.
 
-Creates the branded icon and Desktop shortcut without invoking PowerShell. Keeping
-these actions in ordinary Python avoids antivirus heuristics commonly triggered by
-CMD -> PowerShell -> Base64 decode patterns.
+Creates the branded icon and Desktop shortcut without invoking PowerShell. The checked-in
+asset is a compact JPEG source; Pillow generates a standard multi-size Windows ICO.
 """
 from __future__ import annotations
 
+import argparse
 import base64
 import ctypes
-import struct
 import sys
+from io import BytesIO
 from pathlib import Path
 
 
-def _validate_ico(path: Path) -> None:
-    """Fail early if the decoded asset is not a real Windows ICO container."""
-    data = path.read_bytes()
-    if len(data) < 6:
-        raise RuntimeError("Presence icon file is incomplete.")
-
-    reserved, icon_type, image_count = struct.unpack("<HHH", data[:6])
-    if reserved != 0 or icon_type != 1 or image_count < 1:
-        raise RuntimeError("Presence icon file is not a valid Windows ICO.")
-
-    directory_size = 6 + image_count * 16
-    if len(data) < directory_size:
-        raise RuntimeError("Presence icon directory is incomplete.")
-
-    # Check every directory entry points to actual bytes inside the file.
-    for index in range(image_count):
-        entry = data[6 + index * 16 : 6 + (index + 1) * 16]
-        image_size = struct.unpack("<I", entry[8:12])[0]
-        image_offset = struct.unpack("<I", entry[12:16])[0]
-        if image_size <= 0 or image_offset < directory_size or image_offset + image_size > len(data):
-            raise RuntimeError("Presence icon contains an invalid image entry.")
-
-
 def materialize_icon(root: Path) -> Path:
-    source = root / "assets" / "presence.ico.b64"
+    """Decode the compact source image and generate a proper multi-resolution ICO."""
+    source = root / "assets" / "presence_source.jpg.b64"
     target = root / "assets" / "presence.ico"
     if not source.exists():
-        raise FileNotFoundError(f"Presence icon asset is missing: {source}")
+        raise FileNotFoundError(f"Presence icon source is missing: {source}")
+
+    try:
+        from PIL import Image
+    except ImportError as exc:
+        raise RuntimeError("Pillow is required to generate the Presence icon. Run Setup.cmd again.") from exc
 
     encoded = "".join(source.read_text(encoding="ascii").split())
-    target.write_bytes(base64.b64decode(encoded, validate=True))
-    _validate_ico(target)
+    raw = base64.b64decode(encoded, validate=True)
+    image = Image.open(BytesIO(raw)).convert("RGBA")
+
+    # Build all Windows shell sizes from one clean 256px source.
+    sizes = [(16, 16), (24, 24), (32, 32), (48, 48), (64, 64), (128, 128), (256, 256)]
+    target.parent.mkdir(parents=True, exist_ok=True)
+    image.save(target, format="ICO", sizes=sizes)
+
+    # Ask Pillow to reopen the file so malformed output fails immediately.
+    with Image.open(target) as check:
+        if check.format != "ICO":
+            raise RuntimeError("Presence icon generation did not produce a valid Windows ICO.")
+
     return target.resolve()
 
 
 def _refresh_windows_icons() -> None:
     """Ask Explorer to refresh shell icons after replacing the shortcut/icon."""
     try:
-        # SHCNE_ASSOCCHANGED + SHCNF_IDLIST is the standard broad shell refresh.
         ctypes.windll.shell32.SHChangeNotify(0x08000000, 0x0000, None, None)
     except Exception:
-        # The shortcut is still valid if Explorer declines/defers the refresh.
         pass
 
 
@@ -68,14 +60,11 @@ def create_desktop_shortcut(root: Path, icon_path: Path) -> Path:
 
     if not icon_path.exists():
         raise FileNotFoundError(f"Presence icon was not created: {icon_path}")
-    _validate_ico(icon_path)
 
     shell = win32com.client.Dispatch("WScript.Shell")
     desktop = Path(shell.SpecialFolders("Desktop"))
     shortcut_path = desktop / "Presence Coach.lnk"
 
-    # Delete the old shortcut first so Explorer does not keep metadata from a
-    # previously broken/generic-icon .lnk.
     if shortcut_path.exists():
         shortcut_path.unlink()
 
@@ -83,10 +72,7 @@ def create_desktop_shortcut(root: Path, icon_path: Path) -> Path:
     shortcut.TargetPath = str((root / ".venv" / "Scripts" / "pythonw.exe").resolve())
     shortcut.Arguments = "session_export_mode.py"
     shortcut.WorkingDirectory = str(root.resolve())
-
-    # Microsoft documents an .ico path directly for WshShortcut.IconLocation.
-    # Avoid appending an icon-resource index for a standalone .ico file.
-    shortcut.IconLocation = str(icon_path)
+    shortcut.IconLocation = f"{icon_path},0"
     shortcut.Description = "Presence Coach"
     shortcut.Save()
 
@@ -95,16 +81,24 @@ def create_desktop_shortcut(root: Path, icon_path: Path) -> Path:
 
 
 def main() -> int:
+    parser = argparse.ArgumentParser()
+    parser.add_argument(
+        "--icon-only",
+        action="store_true",
+        help="Generate assets/presence.ico without creating a Desktop shortcut.",
+    )
+    args = parser.parse_args()
+
     root = Path(__file__).resolve().parent
     try:
         icon = materialize_icon(root)
-        shortcut = create_desktop_shortcut(root, icon)
+        print(f"Presence icon created: {icon}")
+        if not args.icon_only:
+            shortcut = create_desktop_shortcut(root, icon)
+            print(f"Desktop shortcut created: {shortcut}")
     except Exception as exc:
         print(f"Windows setup failed: {exc}", file=sys.stderr)
         return 1
-
-    print(f"Presence icon created and validated: {icon}")
-    print(f"Desktop shortcut created: {shortcut}")
     return 0
 
 
