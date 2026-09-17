@@ -1,8 +1,10 @@
 """Elapsed transcript + Word/MP3 export layer for Presence Coach."""
 from __future__ import annotations
 
+import sys
 import time
 import tkinter as tk
+from pathlib import Path
 from tkinter import filedialog, messagebox
 
 import provider_mode as provider
@@ -12,9 +14,35 @@ from session_export import export_transcript_docx, format_elapsed
 
 
 base = provider.base
+_original_app_init = base.App.__init__
 _original_transcript = base.Transcript
 _original_show_session_review = base.App.show_session_review
 _original_make_sidebar = review._make_scrollable_review_sidebar
+
+
+def _resource_path(relative: str) -> Path:
+    root = Path(getattr(sys, "_MEIPASS", Path(__file__).resolve().parent))
+    return root / relative
+
+
+def _branded_init(self):
+    if sys.platform == "win32":
+        try:
+            import ctypes
+
+            ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID("PresenceCoach.Desktop")
+        except Exception:
+            pass
+
+    _original_app_init(self)
+
+    try:
+        icon = _resource_path("assets/presence.ico")
+        if icon.exists():
+            self.iconbitmap(default=str(icon))
+    except (tk.TclError, OSError):
+        # The app must remain usable if Windows rejects a custom icon for any reason.
+        pass
 
 
 class ElapsedTranscript(_original_transcript):
@@ -208,6 +236,7 @@ def show_session_review_with_exports(self):
         self._review_audio_button.configure(state="disabled")
 
 
+base.App.__init__ = _branded_init
 base.App.save = export_transcript_word
 base.App.export_transcript_word = export_transcript_word
 base.App.export_session_audio = export_session_audio
