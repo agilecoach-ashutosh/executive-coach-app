@@ -198,3 +198,15 @@ source revision, adaptations and limits. This is prompt guidance, not model trai
 
 To install this behavioural update, replace **coaching.py**, close the app fully,
 reopen it and start a fresh session. No reinstall or additional dependency is needed.
+
+## Empathy and partnership refinement
+
+The prompt now gives specific guidance for emotional openings, acknowledgement
+without another question, accepting correction, consent before observations, and
+respect for cultural and practical context. Client-generated choices remain central.
+See [design and current ICF sources](reference/ICF-PRACTICE-DESIGN.md) and the expanded
+[manual review scenarios](COACHING-REVIEW.md). These are design intentions; live
+coaching quality has not been validated as PCC/MCC-equivalent.
+
+For a source installation, update `coaching.py`, fully close the app, and start a
+new session. A packaged executable needs rebuilding to include the new instructions.
