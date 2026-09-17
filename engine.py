@@ -11,6 +11,7 @@ from google import genai
 from google.genai import types
 
 from coaching import SYSTEM_PROMPT, TurnGate
+from session_export import SessionAudioRecorder
 
 
 class LiveEngine(threading.Thread):
@@ -54,6 +55,8 @@ class LiveEngine(threading.Thread):
         self.overrun = False
         self.output_level = 0.0
         self.playback_until = 0.0
+        self.recorder = SessionAudioRecorder()
+        self.recorder.start(time.monotonic())
 
     def emit(self, kind, value=''):
         self.events.put((kind, value))
@@ -73,6 +76,12 @@ class LiveEngine(threading.Thread):
         self.playback_until = 0.0
         with self.lock:
             self.output.clear()
+
+    def has_audio(self):
+        return self.recorder.has_audio()
+
+    def export_audio(self, filename):
+        self.recorder.export_mp3(filename)
 
     def capture(self, data, frames, timing, status):
         if self.stopping.is_set() or self.muted:
@@ -94,8 +103,10 @@ class LiveEngine(threading.Thread):
             else 0.0
         )
         if part:
-            self.playback_until = time.monotonic() + frames / 24000 + .06
-            self.cooldown = time.monotonic() + .5
+            now = time.monotonic()
+            self.recorder.append(part, 24000, 1, now=now)
+            self.playback_until = now + frames / 24000 + .06
+            self.cooldown = now + .5
 
     def run(self):
         try:
@@ -267,6 +278,10 @@ class LiveEngine(threading.Thread):
             ):
                 self.pending.clear()
                 continue
+
+            # Record the open human side of the conversation. This includes natural
+            # pauses while the user has the floor, but excludes AI playback/cooldown.
+            self.recorder.append(chunk, 16000, 1, now=time.monotonic())
 
             was_active = self.gate.active
             self.pending.append(chunk)
