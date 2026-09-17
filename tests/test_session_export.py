@@ -30,8 +30,16 @@ class SessionExportTests(unittest.TestCase):
                 [cell.text for cell in table.rows[0].cells],
                 ["Speaker (Coach / Coachee)", "Timestamp", "Transcript"],
             )
-            self.assertEqual([cell.text for cell in table.rows[1].cells], list(rows[0]))
-            self.assertEqual([cell.text for cell in table.rows[2].cells], list(rows[1]))
+            # Transcript rows are stored internally as (timestamp, role, text),
+            # but the exported Word document is intentionally Speaker, Timestamp, Transcript.
+            self.assertEqual(
+                [cell.text for cell in table.rows[1].cells],
+                [rows[0][1], rows[0][0], rows[0][2]],
+            )
+            self.assertEqual(
+                [cell.text for cell in table.rows[2].cells],
+                [rows[1][1], rows[1][0], rows[1][2]],
+            )
             self.assertEqual(len(table.rows), 3)
 
     def test_mp3_export_writes_audio(self):
