@@ -37,7 +37,7 @@ def _branded_init(self):
     _original_app_init(self)
 
     try:
-        icon = _resource_path("assets/presence.ico")
+        icon = _resource_path("Presence-Coach.ico")
         if icon.exists():
             self.iconbitmap(default=str(icon))
     except (tk.TclError, OSError):
