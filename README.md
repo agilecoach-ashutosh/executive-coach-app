@@ -3,7 +3,6 @@
 A Jarvis-inspired Windows desktop app for live coaching conversations.
 
 Repository: https://github.com/agilecoach-ashutosh/executive-coach-app
-Original implementation: no Mark-LIII source code or visual assets are copied.
 
 **Status: runnable source prototype, not a verified Windows release.** The package
 contains setup scripts and an installer build workflow, not a prebuilt EXE.
@@ -165,7 +164,6 @@ evaluation. These are not implemented in this prototype.
 
 ## References
 
-- Inspiration: https://github.com/FatihMakes/Mark-LIII
 - ICF competencies: https://coachingfederation.org/credentialing/coaching-competencies/icf-core-competencies/
 - Gemini Live: https://ai.google.dev/gemini-api/docs/live-api
 - Voice and transcription API: https://ai.google.dev/gemini-api/docs/live-api/capabilities
