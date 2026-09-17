@@ -12,6 +12,8 @@ from typing import Iterable
 
 from google import genai
 
+from review_criteria import get_review_criteria
+
 
 # Keep review models on current stable Gemini text models that are broadly available,
 # including free-tier access where Google currently offers it. Avoid retired 2.5 IDs.
@@ -113,6 +115,8 @@ def build_review_prompt(level: str, rows, metrics: SessionMetrics, scenario=None
     if level not in {"ACC", "PCC", "MCC"}:
         level = "PCC"
 
+    source_name, criteria = get_review_criteria(level)
+
     scenario_text = "Practice workplace scenario"
     if scenario:
         scenario_text = (
@@ -126,38 +130,35 @@ def build_review_prompt(level: str, rows, metrics: SessionMetrics, scenario=None
 The human user is the COACH. The other speaker is a simulated COACHEE.
 
 PURPOSE
-Give rigorous developmental feedback against the current ICF coaching framework at
-{level} practice level. Use the 2025 ICF Core Competencies and the updated Minimum
-Skills Requirements in effect from January 1, 2026 as the conceptual reference.
+Give rigorous developmental feedback at the {level} practice level using the exact
+level-specific evidence framework supplied below. The assessment basis for this review is:
+{source_name}
+
 This is NOT an official ICF assessment. Do not declare pass/fail, credential readiness,
-or an official score. Do not claim to be an ICF assessor.
+or an official score. Do not claim to be an ICF assessor. The framework is a developmental
+reference, not a formulaic checklist.
 
 EVIDENCE BOUNDARY
-Evaluate only what is observable in the transcript below. Do NOT infer body language,
-intent, tone, hidden client context, or events not captured in the transcript. The
-simulated client's private persona is deliberately not provided. Speech transcription
-and punctuation may contain errors. If evidence is insufficient, explicitly say so.
+Evaluate only what is observable in the transcript and local metrics below. Do NOT infer
+body language, tone, energy, intent, hidden client context, or events not captured in the
+transcript. The simulated client's private persona is deliberately not provided. Speech
+transcription and punctuation may contain errors. If a criterion depends on audio,
+nonverbal behavior, silence quality, energy shift, or context that is unavailable, label
+it NOT ASSESSABLE or LIMITED EVIDENCE rather than inventing evidence.
 
-LEVEL LENS
-ACC: look for reliable foundational client-centered coaching, clear agreement,
-listening, relevant questions/reflections, client ownership, and avoidance of advice.
-PCC: look for consistent partnership, individualized listening, trust/safety,
-presence, concise observations/questions, evoking the client's own awareness, and
-client-led learning/action without steering.
-MCC: look for seamless, nuanced, highly responsive partnership; spacious presence;
-deep listening to the whole person and context; elegant use of the client's language;
-and awareness/growth emerging primarily from the client's own thinking. Do not expect
-MCC theatrics, excessive depth, or forced transformation.
+LEVEL-SPECIFIC REVIEW FRAMEWORK
+{criteria}
 
-CORE AREAS TO REVIEW
-1. Establishes and Maintains Agreements
-2. Cultivates Trust and Safety
-3. Maintains Presence
-4. Listens Actively
-5. Evokes Awareness
-6. Facilitates Client Growth
-Also note any observable ethical/role-boundary concern. A transcript alone cannot
-fully evidence every aspect of coaching mindset or ethics.
+HOW TO APPLY THE FRAMEWORK
+- Review the whole coaching conversation first, then examine individual markers/behavioral statements.
+- Do not treat absence of a behavior as failure when there was no reasonable opportunity to demonstrate it.
+- Distinguish NOT OBSERVED from NO OPPORTUNITY and NOT ASSESSABLE.
+- Use the client's actual words and timestamps whenever evidence is available.
+- Consider patterns across the session, not isolated coach sentences only.
+- Do not reward performative depth, excessive questioning, forced action, or generic empathy.
+- Do not infer that a marker was demonstrated merely because the coach asked a question about it.
+- When a marker is only partially evidenced, explain exactly what was present and what was missing.
+- Ethical/role concerns should be reported only when observable in the transcript.
 
 LOCAL SESSION METRICS (descriptive, not ICF scoring)
 Duration: {format_duration(metrics.duration_seconds)}
@@ -176,36 +177,46 @@ OUTPUT FORMAT
 Use these exact section headings:
 
 DEVELOPMENTAL REVIEW — {level}
+ASSESSMENT BASIS: {source_name}
 
 WHAT THE COACH DID WELL
-Give 3-5 evidence-based observations. Include timestamp references when possible.
+Give 3-5 evidence-based observations with marker/behavior references and timestamps where possible.
 Do not praise vaguely.
 
-COMPETENCY REVIEW
-For each of the six core areas above, use:
-Area name — Evidence strength: Strong / Developing / Limited evidence
+MARKER / BEHAVIORAL EVIDENCE
+Review every marker or behavioral statement in the selected framework that can reasonably
+be evaluated from this session. For each item use this compact format:
+[Marker ID or short behavior name] — OBSERVED / PARTIAL EVIDENCE / NOT OBSERVED / NO OPPORTUNITY / NOT ASSESSABLE
+Evidence: timestamp(s) and a concise explanation.
+Development note: only when useful.
+
+Do not fabricate marker IDs for MCC. MCC uses behavioral statements rather than the ACC/PCC
+numbering scheme; use concise behavior names under the relevant competency.
+
+COMPETENCY SYNTHESIS
+For Competencies 1 and 3-8, summarize the pattern of evidence using:
+Competency name — Evidence strength: Strong / Developing / Limited evidence / Not assessable
 Observed evidence: ...
 Development opportunity: ...
-Use transcript timestamps and short excerpts where they materially help.
+For Competency 2, follow the selected framework's limitation on what one session can evidence.
 
 PATTERNS TO WATCH
-Identify up to 4 recurring patterns such as leading, stacked questions, long coach
-turns, premature action, missed client language, advice, over-reflection, or weak
-agreement. Mention only patterns actually supported by the transcript.
+Identify up to 4 recurring patterns actually supported by the transcript, such as leading,
+stacked questions, long coach turns, premature action, missed client language, advice,
+over-reflection, weak agreement, or coach-controlled closure.
 
 THREE HIGH-LEVERAGE PRACTICE EDGES
-Give exactly three specific changes the coach could practice next time. Make each
-one behaviorally observable, not generic.
+Give exactly three behaviorally observable changes the coach could practice next time.
+Link each practice edge to one or more specific markers/behavioral statements.
 
 MOMENTS WORTH REVISITING
-Choose up to 3 coach turns. For each, show the timestamp, what happened, and one
-alternative coaching move that preserves client ownership. Alternatives are examples,
+Choose up to 3 coach turns. For each, show timestamp, what happened, relevant marker/behavior,
+and one alternative coaching move that preserves client ownership. Alternatives are examples,
 not 'correct answers'.
 
 BOTTOM LINE
-Write 3-5 sentences describing the developmental picture at {level} without a score,
-rank, pass/fail statement, or credential-readiness verdict. End with: "Developmental
-AI review only — not an official ICF assessment."
+Write 3-5 sentences describing the developmental picture at {level} without a score, rank,
+pass/fail statement, or credential-readiness verdict. End with: "Developmental AI review only — not an official ICF assessment."
 
 TRANSCRIPT
 {transcript}
