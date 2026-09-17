@@ -16,6 +16,18 @@ Repository: https://github.com/agilecoach-ashutosh/executive-coach-app
 
 ---
 
+## ⬇ Download Presence Coach for Windows
+
+### [Download Presence Coach v0.2.0 (.exe)](https://github.com/agilecoach-ashutosh/executive-coach-app/releases/download/v0.2.0/Presence-Coach-Setup-0.2.0.exe)
+
+**Windows 10/11 • 64-bit • Python not required**
+
+> Windows SmartScreen may show **Unknown publisher** because the current installer is not code-signed. If you downloaded the installer from this official repository, choose **More info → Run anyway** to continue.
+
+[View all releases](https://github.com/agilecoach-ashutosh/executive-coach-app/releases)
+
+---
+
 # Install Presence Coach on Windows
 
 ## Recommended — standalone installer
@@ -26,7 +38,7 @@ Presence is packaged with its own Python runtime and required libraries inside t
 
 ### Step 1 — Download the installer
 
-Open the Releases page:
+Download the latest installer from the link above or open the Releases page:
 
 https://github.com/agilecoach-ashutosh/executive-coach-app/releases
 
