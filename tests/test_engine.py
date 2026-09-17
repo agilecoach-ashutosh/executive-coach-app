@@ -5,11 +5,23 @@ import queue
 import sys
 import types
 import unittest
-from unittest.mock import AsyncMock, patch
+from unittest.mock import AsyncMock
 
 # Allows transport tests on headless machines without PortAudio.
-with patch.dict(sys.modules, {'sounddevice': types.ModuleType('sounddevice')}):
+# Do not use patch.dict(sys.modules, ...) here: patch.dict restores the entire
+# module mapping on exit, which unloads NumPy entries from sys.modules while
+# the native NumPy DLL remains loaded. A later NumPy import on Windows then
+# fails with "cannot load module more than once per process".
+_fake_sounddevice = types.ModuleType('sounddevice')
+_previous_sounddevice = sys.modules.get('sounddevice')
+sys.modules['sounddevice'] = _fake_sounddevice
+try:
     engine_module = importlib.import_module('engine')
+finally:
+    if _previous_sounddevice is None:
+        sys.modules.pop('sounddevice', None)
+    else:
+        sys.modules['sounddevice'] = _previous_sounddevice
 
 
 class TransportTests(unittest.IsolatedAsyncioTestCase):
