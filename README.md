@@ -1,210 +1,236 @@
 # Presence Coach — Windows desktop prototype
 
-A Jarvis-inspired Windows desktop app for live coaching conversations.
+Presence is a Windows desktop application for live professional-coaching practice.
+It supports two experiences:
+
+- **I am a Coachee** — Presence acts as the coach.
+- **I am a Coach** — the user coaches a simulated professional coachee with hidden scenario context, then reviews the session.
 
 Repository: https://github.com/agilecoach-ashutosh/executive-coach-app
 
-**Status: runnable source prototype, not a verified Windows release.** The package
-contains setup scripts and an installer build workflow, not a prebuilt EXE.
-Live cloud sessions and real Windows microphone/speaker behaviour still need testing.
+**Status: runnable source prototype, not a verified Windows release.** Live cloud
+sessions, model availability, microphone/speaker behaviour, transcription quality,
+and generated coaching feedback still require real-world testing.
 
 ## Start on your Windows PC
 
-1. Extract this ZIP into a permanent folder such as `C:\PresenceCoach`.
+1. Put the repository in a permanent folder such as `C:\PresenceCoach`.
 2. Install **Python 3.12 (64-bit)** from https://www.python.org/downloads/windows/
-   including the Python launcher. It can coexist with Python 3.14; you do not need
-   to uninstall your current Python. This build deliberately targets 3.12.
-   Alternatively, in Terminal run `winget install -e --id Python.Python.3.12`.
-3. Double-click **Setup.cmd**. It creates a private environment, installs packages
-   and adds a desktop shortcut. Keep the folder in place afterwards.
+   including the Python launcher. Python 3.12 can coexist with newer Python versions.
+   Alternatively run `winget install -e --id Python.Python.3.12`.
+3. Double-click **Setup.cmd**. It creates `.venv`, installs dependencies, and creates
+   a desktop shortcut that launches the current Coach/Coachee + Review experience.
 4. Open **Presence Coach** from the desktop or double-click **Start.cmd**.
-5. Open **Settings** and enter a Gemini API key from https://aistudio.google.com/apikey in the application.
-   Do not put the key in GitHub, screenshots, transcripts or messages.
-6. Choose devices in Settings, close it, tick consent and click **Begin conversation**. Say what you want
-   to explore. Google processes the conversation, so internet and available Live
-   API quota are required. This is not an offline application or a promise of free use.
+5. Open **Settings** and enter a Gemini API key.
+6. Choose microphone/speaker devices, enable session consent, then begin.
 
-The editable model defaults to `gemini-3.1-flash-live-preview`, the model selected
-in the user-tested configuration. If your account cannot access it, select another
-Live AUDIO model available to your account. A regular text model is not compatible.
-The alternate entry is `gemini-3.8-live`.
-Model availability is provider-controlled; changing the field cannot grant access.
+### Get a Gemini API key
 
-## Amber voice-reactive interface
+1. Sign in to Google AI Studio: https://aistudio.google.com/
+2. Open the Gemini API key page: https://aistudio.google.com/apikey
+3. Create a key for an available project.
+4. Copy the key and paste it into **Presence → Settings**.
+5. Optionally choose **Remember key** to store it through Windows Credential Manager.
 
-The main screen features an original procedural orb inspired by the supplied Jarvis
-reference: rotating particles, animated filaments, a bright centre, and gentle movement.
-Microphone amplitude drives the orb while listening; actual playback PCM amplitude
-controls it while speaking. Idle motion is decorative, not a microphone indicator.
-Use **Gentle motion** to reduce rotation and shaking.
+Do not place API keys in GitHub, screenshots, exported transcripts, or messages.
+Google controls API availability, quotas, pricing, and model access.
 
-Technical fields are in **Settings**. Hover over or keyboard-focus **How to get a key**
-for instructions; click it for a persistent help dialog with Google AI Studio links.
-Consent and session controls stay above the transcript. No extra dependencies are
-required for this interface update.
+The live conversation defaults to `gemini-3.1-flash-live-preview`. The settings also
+allow another Live AUDIO model. A normal text-only model cannot replace the live
+conversation transport. Post-session developmental reviews use a separate text call,
+currently preferring `gemini-3.8-flash` with `gemini-2.5-flash` as a fallback.
 
-### Updating an existing installation
+## Mode 1 — I am a Coachee
 
-Close the app. Download the repository ZIP using **Code → Download ZIP**, extract it,
-and copy `app.py` and `engine.py` into your existing app folder, replacing both files.
-Keep your `.venv` folder and launch using your existing `Start.cmd` or shortcut.
-Saved keys remain in Windows Credential Manager. Select your preferred voice and
-devices again in Settings. Settings other than the saved key reset on restart.
+Presence acts as an AI reflection partner informed by professional coaching practice.
+`coaching.py` contains the editable behavioural instructions. The prompt emphasizes
+client ownership, listening, concise reflections, one open question at a time, consent
+before challenge/exercises, non-leading exploration, and client-generated learning
+and action.
+
+Presence is not a human, therapist, ICF-credentialed coach, or substitute for
+qualified professional support.
+
+## Mode 2 — I am a Coach
+
+The user becomes the coach and Presence becomes a simulated workplace coachee.
+`scenarios.py` contains professional scenarios across environments such as technology,
+banking, consulting, startups, manufacturing, product, pharmaceuticals, education,
+and financial services.
+
+The coach sees only the presenting client brief. The simulated client receives hidden
+context—tensions, assumptions, competing values, and background details—and is
+instructed to reveal them gradually rather than dump the whole scenario at the start.
+The simulated coachee may hesitate, disagree, say “I don’t know,” respond naturally
+to leading questions, and finish with partial clarity.
+
+This mode is for **practice and mentor-coaching discussion**. An AI simulated coachee
+is not represented as a genuine client for an official credential submission.
+
+## Post-session Coach Practice review
+
+When a Coach Practice session ends, Presence opens a review screen with locally
+computed session metrics and an optional AI-generated developmental review.
+
+### Local metrics
+
+The current review shows:
+
+- Session duration
+- Coach / Coachee speaking-share estimate based on transcript word count
+- Coach turns
+- Coachee turns
+- Coach questions detected from transcript punctuation
+- Coach turns containing multiple questions
+- Average coach-turn length
+- Longest coach turn
+- Recorded interruption notes
+
+The speaking-share value is **not measured audio time**. Question counts also depend
+on provider transcription punctuation. These are descriptive practice metrics, not
+ICF scoring criteria.
+
+### ACC / PCC / MCC developmental review
+
+Choose **ACC**, **PCC**, or **MCC**, then click **Generate coaching review**.
+`reviewer.py` sends only the visible Coach/Coachee transcript, visible scenario brief,
+and local metrics to a separate text-model review call. The reviewer does **not**
+receive the hidden simulated-client persona.
+
+The generated review covers:
+
+- What the coach did well, with transcript evidence
+- Establishes and Maintains Agreements
+- Cultivates Trust and Safety
+- Maintains Presence
+- Listens Actively
+- Evokes Awareness
+- Facilitates Client Growth
+- Observable patterns to watch
+- Three high-leverage practice edges
+- Specific moments worth revisiting with alternative coaching moves
+- A developmental bottom line
+
+The review uses an ACC/PCC/MCC developmental lens informed by the **2025 ICF Core
+Competencies** and the updated **Minimum Skills Requirements effective in 2026**.
+It deliberately does **not** issue an official ICF score, pass/fail result, or claim
+credential readiness. AI feedback should be checked with a qualified mentor coach or
+other appropriately qualified human reviewer.
+
+A **Review** button remains available in the top bar after a Coach Practice session so
+the review window can be reopened. Reviews and transcripts can be exported as text.
+
+## Voice-reactive interface
+
+The main experience uses a procedural amber orb with particles, filaments, halos, and
+state-dependent movement. Microphone amplitude drives the orb while listening; local
+playback amplitude drives it while the AI is speaking. **Gentle motion** reduces
+animation. The optimized launcher reduces Canvas work so dialogs and controls remain
+responsive.
 
 ## During a conversation
 
 | Control | Behaviour |
 | --- | --- |
-| Silence setting | Waits this long after detected speech before requesting a reply; default six seconds. |
-| Take your time | Holds the current spoken turn through silence. Click **I'm ready** to submit it. |
-| I'm ready | Finishes the current spoken turn. Does nothing if no turn has started. |
-| Interrupt coach | Clears local playback and signals a new client turn; then speak. |
-| Mute mic | Stops new microphone input and submits any already captured active turn. A reply may still play. |
-| End | Disconnects audio and cloud processing; preserves the visible transcript. |
-| Send | Sends typed input into the same connected conversation. |
-| Save transcript | Opens a save dialog and writes a timestamped UTF-8 text file. |
+| Silence setting | Waits this long after detected speech before submitting the spoken turn. |
+| Take your time | Holds the current spoken turn through silence until **I'm ready**. |
+| I'm ready | Finishes the current active spoken turn. |
+| Interrupt | Stops local AI playback and gives the human the floor. |
+| Mute | Stops new microphone input. |
+| End | Disconnects the live session and preserves the transcript in memory. |
+| Send | Sends typed input into the connected conversation. |
+| Export transcript | Saves a timestamped UTF-8 text transcript. |
 
-**For private reflection without transmitting audio, use Mute or End.** Take your
-time preserves the floor but is not a privacy mute: audio from the active turn
-continues to stream. The app never stores raw recordings on disk.
-
-The prototype uses **turn-based voice**, not automatic spoken interruption. Its mic
-is ignored during coach playback to prevent speaker feedback. Use the interrupt
-button to speak over the coach. Quiet-time detection uses local audio amplitude,
-not semantic understanding; it can mistake a fan or nearby speech for your voice.
-Use headphones and raise the threshold if background noise prevents a reply.
-Lower it if soft speech is not detected. Settings apply on the next session.
-
-Starting a new session resets model context. There is no hidden cross-session
-memory or automatic reconnection. The app asks you to export unsaved text before
-clearing it. If Google ends a session, export and start again; previous context
-will not automatically carry over. A crash can lose text not yet exported.
-
-Transcriptions arrive progressively but may be delayed, misrecognized or ordered
-imperfectly by the provider. Interrupted coach text can contain generated words
-that were never actually played. Exports include a note explaining this.
-
-## Coaching behaviour
-
-`coaching.py` contains the editable behavioural instructions. They ask the model
-to remain in coaching mode without supplying solutions, establish the client's desired outcome, listen to their language, offer tentative
-reflections, invite correction, ask one open question at a time, seek permission
-before an exercise/challenge, and let clients choose their own actions.
-
-Examples of intended quality (illustrative, not canned scripts):
-
-- Client: “Everyone expects me to have the answer.”
-  Coach: “What does having the answer represent for you?”
-- Client: “I don't know. I need a moment.”
-  Coach: “Take your time.” Then silence.
-- Client: “Just tell me what I should do.”
-  Coach: “I can help you think it through; the choice stays yours. What feels most important to you in this decision?”
-
-This is an **AI reflection partner informed by ICF principles**. It is not an
-ICF-certified coach, therapy, or a substitute for qualified human support. Prompt
-instructions cannot guarantee question quality or crisis handling. Before offering
-the app to clients, assess actual session transcripts and obtain appropriate consent.
+The prototype uses turn-based voice rather than full-duplex echo-cancelled interruption.
+Quiet-time detection is based on local audio amplitude, not semantic understanding.
+Background noise can therefore affect turn detection. Headphones are recommended.
 
 ## Privacy and keys
 
-- Audio and typed conversation go to Google Gemini for processing; its terms apply.
-- Conversations stay in app memory unless you export. Exported text is unencrypted;
-  choose a suitable folder and manage access yourself.
-- No screen capture, webcam, computer-control tools, background wake-word listener,
-  analytics, automatic transcript uploads, or automatic disk recording are included.
-- Keys are in memory by default. Opting to remember them uses the OS keyring
-  (Windows Credential Manager on Windows). **Forget saved key** removes that entry.
-- Removing the app does not automatically delete exported files or the credential;
-  use Forget saved key before uninstalling if desired.
+- Audio and typed live-conversation data are processed by Google Gemini when using the current provider.
+- Post-session AI review sends the visible transcript and descriptive metrics to Gemini only when the user explicitly requests a review.
+- Conversations remain in application memory unless exported.
+- Exported transcript/review files are ordinary unencrypted text files.
+- The app does not currently store raw audio recordings on disk.
+- No webcam, screen capture, computer-control agent, wake-word listener, or automatic transcript upload is included.
+- Saved API keys use the OS keyring (Windows Credential Manager on Windows).
+- **Forget saved key** removes the saved credential entry when available.
 
-## Create an ordinary Windows installer
+Starting a new session resets model context. There is no guaranteed hidden
+cross-session memory or automatic session resumption. A crash can lose text that has
+not been exported.
 
-The included workflow is ready for a **executive-coach-app repository**. Open **Actions → Build Windows installer → Run workflow**. On a successful
-run, download the **Presence-Coach-Windows** artifact and extract the setup EXE.
+## Current source structure
 
-The workflow bundles Python and dependencies with PyInstaller, then packages them
-with Inno Setup on a Windows runner. End users of that installer will not need
-Python or a terminal. The resulting EXE is unsigned; signing and publisher identity
-are release tasks. Only install builds from a source you trust. The workflow has
-not yet been validated as a Windows release.
+```text
+app.py              Base Tkinter UI and Gemini session controls
+launch.py           Performance-optimized orb/dialog layer
+practice_mode.py    Coach/Coachee role selection and AI coachee mode
+practice_review.py  Post-session metrics/review UI and current application entry point
+coaching.py         Presence-as-coach behavioural instructions and Transcript model
+scenarios.py        Simulated professional coachee scenarios and hidden persona prompts
+reviewer.py         Local metrics + ACC/PCC/MCC developmental review prompt/call
+engine.py           Gemini Live audio transport and turn handling
+```
+
+`Start.cmd`, the Setup desktop shortcut, and the Windows packaging workflow now use
+`practice_review.py` as the application entry point.
+
+## Updating an existing source installation
+
+The safest update path is:
+
+```powershell
+git pull
+```
+
+Then fully close any running Presence process and reopen it with **Start.cmd**.
+If dependencies change in a future update, rerun **Setup.cmd**.
+
+## Create a Windows installer
+
+Open **Actions → Build Windows installer → Run workflow**. The workflow installs
+Python dependencies, runs the automated tests, packages `practice_review.py` with
+PyInstaller, and builds an Inno Setup installer artifact.
 
 For a local build with Python 3.12 and Inno Setup 6 installed:
 
 ```powershell
 py -3.12 -m pip install -r requirements.txt pyinstaller
-py -3.12 -m PyInstaller --noconfirm --windowed --name PresenceCoach --collect-all sounddevice --collect-all google.genai --hidden-import keyring.backends.Windows app.py
+py -3.12 -m PyInstaller --noconfirm --windowed --name PresenceCoach --collect-all sounddevice --collect-all google.genai --hidden-import keyring.backends.Windows practice_review.py
 & "${env:ProgramFiles(x86)}\Inno Setup 6\ISCC.exe" installer.iss
 ```
 
-## Verification and remaining release gates
+The resulting executable is unsigned unless you separately configure code signing.
 
-Run `python -m unittest discover -s tests -v`.
-Eleven automated tests cover playback amplitude returning to silence, silence timing, hold mode, noise gating, UTF-8 export, stopping playback,
-muting queued audio, interrupt recovery, and processing all incoming audio parts.
-Audio hardware is mocked in transport tests; these are not end-to-end voice tests.
+## Verification
 
-Before calling this a release:
+Run:
 
-1. Build and launch the installer on a clean Windows 11 PC; verify setup, shortcut,
-   audio permissions, selected devices, credentials, export, and uninstall.
-2. Test live English/Hindi sessions, quiet speech, ambient noise, pauses, interrupt,
-   quota errors and network loss. Verify client words do not get cut off.
-3. Review at least ten realistic coaching conversations for agenda partnership,
-   one-question pacing, non-leading language, assumptions, client-led brainstorming, closure,
-   emotional distress and safe escalation. Record failures and iterate.
-4. Check the new Settings window, consent controls, tooltips, and orb layout at 100%, 125% and 150% Windows display scaling. Current minimum
-   window is 1080×700 logical pixels; sidebar settings scroll for shorter displays.
-5. Freeze dependency versions after Windows validation, sign the installer and
-   document the intended audience and support process.
+```powershell
+python -m unittest discover -s tests -v
+```
 
-Suggested next improvements: true speech interruption with echo cancellation,
-semantic end-of-turn detection, adjustable speech speed, compact laptop layout,
-verified session resumption, optional locally encrypted history, and coach-quality
-evaluation. These are not implemented in this prototype.
+Automated tests cover coaching turn policy, transport behaviours, transcript handling,
+and Coach Practice review metrics. Hardware mocks are used for transport tests; these
+are not end-to-end live voice tests and do not establish coaching quality.
 
-## References
+Before calling this a release, test on a clean Windows 11 installation at common
+Windows display scales, with real microphones/speakers, live Gemini quotas, network
+failure, English/Hindi/Hinglish sessions, long pauses, interruption, transcript export,
+Coach Practice scenarios, and ACC/PCC/MCC review generation.
 
-- ICF competencies: https://coachingfederation.org/credentialing/coaching-competencies/icf-core-competencies/
-- Gemini Live: https://ai.google.dev/gemini-api/docs/live-api
-- Voice and transcription API: https://ai.google.dev/gemini-api/docs/live-api/capabilities
+## ICF-related design references
 
-The coaching prompt is original guidance, not a reproduction of ICF's competency text.
+Presence uses ICF material as a developmental reference, not as an endorsement or
+claim of assessment authority.
 
-## Client-led coaching correction
+- 2025 ICF Core Competencies: https://coachingfederation.org/resource/icf-core-competencies/
+- ACC Minimum Skills Requirements: https://coachingfederation.org/resource/acc-minimum-skills-requirements/
+- PCC Minimum Skills Requirements: https://coachingfederation.org/resource/pcc-minimum-skills-requirements/
+- MCC Minimum Skills Requirements: https://coachingfederation.org/resource/mcc-minimum-skills-requirements/
+- Gemini Live API: https://ai.google.dev/gemini-api/docs/live-api
 
-The initial prompt allowed a switch to advice when a client requested ideas. A live
-test showed that this supplied and anchored the client's options. That switch has
-been removed. Brainstorming now invites the client's ideas; the coach must not add
-a menu of solutions, disguise advice as a question, rank client options, or push
-for an action. Necessary safety support remains available.
-
-For existing installations, replace `coaching.py` and fully restart the app before
-starting a fresh session. Existing live connections retain the previous prompt.
-This is a prompt-level correction, not an enforced output filter. Automated audio
-and turn tests do not establish coaching quality. Re-test the reported scenario
-and the cases in `COACHING-REVIEW.md` with the actual Live model.
-
-## Agile Orbit coaching content
-
-The professional-coaching source pages and interactive JavaScript have been reviewed
-and distilled into `coaching.py`, including client ownership, Empty Cup, listening,
-metaphor, contracting, model restraint, tool use, ethics and closure. All 23 question
-functions inform the runtime instructions. The 184 original website questions are
-preserved for review in `reference/agile-orbit-question-bank.json`, not used as a
-random question generator. See `reference/AGILE-ORBIT-INTEGRATION.md` for scope,
-source revision, adaptations and limits. This is prompt guidance, not model training.
-
-To install this behavioural update, replace **coaching.py**, close the app fully,
-reopen it and start a fresh session. No reinstall or additional dependency is needed.
-
-## Empathy and partnership refinement
-
-The prompt now gives specific guidance for emotional openings, acknowledgement
-without another question, accepting correction, consent before observations, and
-respect for cultural and practical context. Client-generated choices remain central.
-See [design and current ICF sources](reference/ICF-PRACTICE-DESIGN.md) and the expanded
-[manual review scenarios](COACHING-REVIEW.md). These are design intentions; live
-coaching quality has not been validated as PCC/MCC-equivalent.
-
-For a source installation, update `coaching.py`, fully close the app, and start a
-new session. A packaged executable needs rebuilding to include the new instructions.
+See `reference/ICF-PRACTICE-DESIGN.md`, `COACHING-REVIEW.md`, and
+`reference/AGILE-ORBIT-INTEGRATION.md` for the product's coaching-design notes and
+manual review material.
