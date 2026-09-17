@@ -1,0 +1,196 @@
+{
+  "repository": "agilecoach-ashutosh/agile-orbit",
+  "commit": "aca2a517d09be75d4541aed09a1acf98c8d4e436",
+  "scope": "Professional Coaching paths, their conversation/practice/model/tool pages and related team-coaching summaries; source-code snapshot, not verification of current deployed browser behaviour or linked external books.",
+  "files": [
+    {
+      "path": "coaching/professional-coaching.html",
+      "sha256": "2b2378ee85492c3f676633e2ae07db0978eb6dea8b6734037122fff4defca804"
+    },
+    {
+      "path": "coaching/professional-coaching-coach.html",
+      "sha256": "c55f3f0c36742a272fa32a546a52fb34dccef9f42aabc18ed14a756546285340"
+    },
+    {
+      "path": "coaching/professional-coaching-coachee.html",
+      "sha256": "2785575621fd9ec111606780960e2b7de72f87f96a987725fcda3481db93d907"
+    },
+    {
+      "path": "coaching/coach-mindset-foundations.html",
+      "sha256": "b9f4f8c445ee41a1a13f1c5ca0a5e6bc35f5dd8d9d8937858bb6dbd62dea33e0"
+    },
+    {
+      "path": "coaching/coach-conversation-craft.html",
+      "sha256": "25bbba900112e4e9220dca7a6678fb2103fa31998b1f1a69f3d52665295f3ece"
+    },
+    {
+      "path": "coaching/coach-models-approaches.html",
+      "sha256": "4d94803376d551130f0c8399e20a9709ee3c07bc77136a5775128d859cfb261d"
+    },
+    {
+      "path": "coaching/coach-practice-standards.html",
+      "sha256": "8166d90175a3536f66b3b6f9a7f0503e747ca6d15a74f23a0ec08c77e0f5c04d"
+    },
+    {
+      "path": "coaching/coach-tools-canvases.html",
+      "sha256": "6a5dfedf38908e9bfc2f117e223a19705fe50ebd8d4014d502f22f6b5d3979ba"
+    },
+    {
+      "path": "coaching/coaching-fundamentals.html",
+      "sha256": "f34cf12612127b8373152e0c6ab5c3e14b1325fe2bb7d44787eb35762253b828"
+    },
+    {
+      "path": "coaching/coaching-mindset.html",
+      "sha256": "2727efc91dd12c859fa9fb8a9563e950fb788cf1a7c857577e57e36048dfaab4"
+    },
+    {
+      "path": "coaching/empty-cup-coaching-mindset.html",
+      "sha256": "65ff606edfa09503211dab8344cd7e8af885b26493dac800f1d957555fb6643d"
+    },
+    {
+      "path": "coaching/active-deep-listening.html",
+      "sha256": "1aacfb50f9ff5b7f40541edca1169aede753039caa90cb4962bd01970105f158"
+    },
+    {
+      "path": "coaching/professional-coaching-questions.html",
+      "sha256": "3a88597e99b7c3a35d72d5cb9ad798d0342506d8f16f8871626b8de2463f6a6d"
+    },
+    {
+      "path": "coaching/session-agreement.html",
+      "sha256": "92cf222d59bbf283a652f210ce6d13574f9932905e6eb76e9aeee716d39be1fc"
+    },
+    {
+      "path": "coaching/session-lab.html",
+      "sha256": "2e1a43c452c43fab811e39e4d5243fe003d33aba4751f4332f00db231ce03a7c"
+    },
+    {
+      "path": "coaching/coachee-coaching-basics.html",
+      "sha256": "d7fc4cbae7bcd59a52623c6531e3ea6568fbdfa34d9f4cc9ed854bfd4a556126"
+    },
+    {
+      "path": "coaching/coachee-topics.html",
+      "sha256": "2cc431b75791c672edd48f73c7d3dcab64c1f170797146d992c53c58554b1dda"
+    },
+    {
+      "path": "coaching/coachee-session-prep.html",
+      "sha256": "3a0406d2b9b013dc52a694e5581e59395184b0bc7ea780901e735cadc82f0b5a"
+    },
+    {
+      "path": "coaching/coachee-journey.html",
+      "sha256": "3254be0f683d02fb195297f882f4c607f479a3565e46d00ecdd6de0532228b28"
+    },
+    {
+      "path": "coaching/chemistry-meeting.html",
+      "sha256": "ea963fd8bc2355fcda7ebd5e61820e08303dfaf1bdcdb04786eb9d048beabc67"
+    },
+    {
+      "path": "coaching/coaching-agreement.html",
+      "sha256": "81a94aff41f951cb59adbc8a943a5d78831777b44a826ca5a799cac6622b9ef2"
+    },
+    {
+      "path": "coaching/coaching-agreements.html",
+      "sha256": "de4e17bd7a4dfa6fbac9ac6a9757f12d790bfa0c6f635f1030702f319f9eea8b"
+    },
+    {
+      "path": "coaching/coaching-professional-agreement.html",
+      "sha256": "d8279abb0312adbdbc402cd3d0fa6add33379312df6d9a2a1c0efbf077bec7c1"
+    },
+    {
+      "path": "coaching/ethics-lab.html",
+      "sha256": "c8155ba95297a8f546b2f6ce5b92c744757be93fb742c43512e43bfca7ecee35"
+    },
+    {
+      "path": "coaching/measuring-coaching-impact.html",
+      "sha256": "94c45d8253f73c0f8dd818fa8cfc9a7bd7029f518165e980c6bec6c0be68c217"
+    },
+    {
+      "path": "coaching/metaphor-in-coaching.html",
+      "sha256": "a5928cab39306a2ba558b0a62bfe0de5bf255226b173ad7c144d11c844d311df"
+    },
+    {
+      "path": "coaching/dialogic-orientation-quadrant.html",
+      "sha256": "eeb8ca60d00ea4463be64e824e3a65586721c9750a72c8cb1bd5bec36e83e134"
+    },
+    {
+      "path": "coaching/coaching-models.html",
+      "sha256": "b6de748f050db9eb6b837a3029cf2b4b9fae757c2cd277e707f31dbfd2326e86"
+    },
+    {
+      "path": "coaching/coaching-psychology-foundations.html",
+      "sha256": "50da6f0234c4bfb5e8b2be56d9f2aa254be97d95a3569edc11ac2ef10fe69340"
+    },
+    {
+      "path": "coaching/mgssc.html",
+      "sha256": "bafee70c249c48cdee01be04cc3895619582c79f27d06f3d0ce942bc117805a1"
+    },
+    {
+      "path": "coaching/professional-coaching-tools.html",
+      "sha256": "2fa308a94dfb9c8b3950e2d3b13fe423f220b63d5aa0995cb09372068710cc99"
+    },
+    {
+      "path": "coaching/perspective.html",
+      "sha256": "78070ec0378be3c76e55c1b430cc41271f01abffb6c0ead0ee7f1370a8e43b48"
+    },
+    {
+      "path": "coaching/decision-canvas.html",
+      "sha256": "f994a9a44d5d4cefce650d9693cf05f19448a19bd09aeaff657cc6de62c5ae02"
+    },
+    {
+      "path": "coaching/future-self.html",
+      "sha256": "255dd6761d18f68c19683c6e8fcf57720ffa417df6da28901e98df9f3197e257"
+    },
+    {
+      "path": "coaching/values-alignment.html",
+      "sha256": "0f0f5ef54998019f5d51d3cd23844391228646634584114be102908d121f9a7d"
+    },
+    {
+      "path": "coaching/progress-ladder.html",
+      "sha256": "9d02ba8ccf2ad03fb6611c8cd2d046645f103f6d9b8590d56ef0856b8bd1bb02"
+    },
+    {
+      "path": "coaching/goal-obstacle-plan.html",
+      "sha256": "a0fd4270ddbc53e980dbd84f2d521596aea4b8869114ea31567bdb4f1afa448e"
+    },
+    {
+      "path": "coaching/ladder-of-inference-coaching.html",
+      "sha256": "f3b861fdbbf2cf6bd7b356ef11d7448cf5460c80f4ce63bb87aa15415663bd00"
+    },
+    {
+      "path": "coaching/coaching-library.html",
+      "sha256": "62387bfdcea5713969ad98c243a5315c820b5e1609efc08af5a705d808d8469e"
+    },
+    {
+      "path": "coaching/book-coach-person-not-problem.html",
+      "sha256": "4fe1ead32aab2e8700b28b1ee76412d2b26716098c7c0c930dfff2154b0af27f"
+    },
+    {
+      "path": "coaching/team-coaching-fundamentals.html",
+      "sha256": "91f201209c5e780da4a2316e9cd4f459073ab75fca5fffbaa78c86187a736359"
+    },
+    {
+      "path": "coaching/speed-team-coaching.html",
+      "sha256": "2cfe9ebaa9ec8072f714bee48c9d50eafa723524014362fff3a76ffcb5aa96d8"
+    },
+    {
+      "path": "coaching/hawkins-five-disciplines.html",
+      "sha256": "a6f0565ab2efcc673881f7df575e2687352459bb98907e50c9d28f7bdb628d3d"
+    },
+    {
+      "path": "js/professional-coaching-questions-lab.js",
+      "sha256": "bbb2d01a56d5c43b06d7e9040802fb79e53d1e423fc18dd7dd26a1dca99c764f"
+    },
+    {
+      "path": "js/professional-coaching-tools-page.js",
+      "sha256": "53663c7282a8b92b09247739a005659cdb5db6af2ffd3ad17cc02ed8a0e87fb1"
+    },
+    {
+      "path": "js/coaching-tool-pages.js",
+      "sha256": "59d147eb72749e2578e5783c44c1f1cf88fb53fc29553a3510c04b94a0e92119"
+    }
+  ],
+  "missing_local_targets": [
+    "coaching/ai-augmented-coaching.html",
+    "coaching/icf-reflection.html",
+    "coaching/coaching-journal.html"
+  ]
+}

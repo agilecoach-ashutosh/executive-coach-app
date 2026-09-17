@@ -1,0 +1,444 @@
+{
+  "source": "https://github.com/agilecoach-ashutosh/agile-orbit/blob/main/js/professional-coaching-questions-lab.js",
+  "source_commit": "aca2a517d09be75d4541aed09a1acf98c8d4e436",
+  "usage": "Owner-authored website questions, preserved for offline review; not automatically injected or randomly selected at runtime. Use the client-led rule and one-question limit before adapting any example. This is not the restricted source handout.",
+  "groups": [
+    {
+      "key": "start",
+      "title": "Starting the Session",
+      "stage": "Start",
+      "purpose": "Open the conversation and locate what matters now.",
+      "useWhen": "The client is arriving with updates, multiple topics or unclear focus.",
+      "listenFor": "What feels most alive, urgent or meaningful today?",
+      "watch": "Do not turn the opening into a status-report interview.",
+      "qs": [
+        "What feels most useful to bring into the room today?",
+        "What has changed since our last conversation that matters now?",
+        "What is asking for your attention most strongly today?",
+        "Where would you like to begin?",
+        "What feels unfinished from the last time we spoke?",
+        "If this conversation served you well, what would we spend our time on?",
+        "What are you arriving with today—energy, concern, possibility or something else?",
+        "Before we choose a topic, what do you want me to understand about where you are right now?"
+      ]
+    },
+    {
+      "key": "substance",
+      "title": "Substance",
+      "stage": "Understand",
+      "purpose": "Identify the core issue, tension or need beneath the first description.",
+      "useWhen": "The client has a lot of detail but the central issue is still unclear.",
+      "listenFor": "What seems to be the real issue under the story?",
+      "watch": "Do not decide what the 'real problem' is for the client.",
+      "qs": [
+        "What feels most difficult about this situation?",
+        "What is the part you keep coming back to?",
+        "What is getting in the way right now?",
+        "What are you most concerned about here?",
+        "What feels most important beneath all these details?",
+        "If we removed the noise, what would remain?",
+        "What is the tension you are trying to resolve?",
+        "What do you most want to understand about what is happening?"
+      ]
+    },
+    {
+      "key": "clarification",
+      "title": "Clarification",
+      "stage": "Understand",
+      "purpose": "Make the client's words, distinctions and meaning more precise.",
+      "useWhen": "A key word, feeling or assumption sounds broad, loaded or ambiguous.",
+      "listenFor": "What does that word mean specifically for this client?",
+      "watch": "Avoid replacing the client's language with your own interpretation.",
+      "qs": [
+        "When you say that, what does it mean specifically for you?",
+        "What part of this is clear, and what part is still uncertain?",
+        "What does that experience feel like from the inside?",
+        "What are you distinguishing between here?",
+        "What would make this easier to describe accurately?",
+        "Which word in what you just said carries the most meaning for you?",
+        "What are you assuming I already understand?",
+        "If we slowed this down, what exactly is happening?"
+      ]
+    },
+    {
+      "key": "elaboration",
+      "title": "Elaboration",
+      "stage": "Understand",
+      "purpose": "Help the client develop a thought, feeling or observation without steering it.",
+      "useWhen": "The client has touched something meaningful but has not fully explored it.",
+      "listenFor": "What else belongs with what they just said?",
+      "watch": "Do not use repeated 'what else?' as a mechanical technique.",
+      "qs": [
+        "What else wants to be said about that?",
+        "Say a little more about the part that matters most.",
+        "What is underneath that first answer?",
+        "What are you noticing as you talk about this?",
+        "What else are you thinking but not yet saying?",
+        "What feeling comes with that?",
+        "If you stayed with this for another minute, what might emerge?",
+        "What is there more of here than you first thought?"
+      ]
+    },
+    {
+      "key": "example",
+      "title": "Example",
+      "stage": "Understand",
+      "purpose": "Move from abstraction into a concrete situation the client can examine.",
+      "useWhen": "The conversation is full of generalisations such as 'always', 'never' or 'people'.",
+      "listenFor": "What specific moment would make this visible?",
+      "watch": "Do not use examples to disprove the client; use them to understand.",
+      "qs": [
+        "What is one recent example that captures this?",
+        "When did you notice this most clearly?",
+        "What did this look like in an actual conversation?",
+        "Can you walk me through one moment when this happened?",
+        "What would I have seen if I had been there?",
+        "Where does this show up most strongly in your day-to-day life?",
+        "What is a specific instance that feels representative?",
+        "What example would help us understand the pattern without oversimplifying it?"
+      ]
+    },
+    {
+      "key": "history",
+      "title": "History",
+      "stage": "Understand",
+      "purpose": "Understand prior attempts, patterns and context without getting trapped in the past.",
+      "useWhen": "Past events or repeated attempts may explain the current pattern.",
+      "listenFor": "What from the past is useful data for the present?",
+      "watch": "Avoid turning coaching into a forensic investigation of causes.",
+      "qs": [
+        "What has led to this point?",
+        "What have you already tried?",
+        "What happened when you tried that?",
+        "When have you faced something similar before?",
+        "What pattern do you recognise across earlier situations?",
+        "What has changed since this first became an issue?",
+        "What have previous attempts taught you?",
+        "What from the history is important to carry forward—and what can stay in the past?"
+      ]
+    },
+    {
+      "key": "assessment",
+      "title": "Assessment",
+      "stage": "Explore",
+      "purpose": "Invite the client to form their own view, judgement or sense-making.",
+      "useWhen": "The client has information but has not articulated what they make of it.",
+      "listenFor": "What is the client's own assessment before advice enters?",
+      "watch": "Do not disguise your evaluation as a question.",
+      "qs": [
+        "What do you make of the situation as you see it now?",
+        "What feels most significant to you?",
+        "What is your current read of what is happening?",
+        "What are you trusting in your own judgement here?",
+        "What seems to matter more than you expected?",
+        "What feels aligned—and what feels off?",
+        "If you had to assess the situation today, what would you say?",
+        "What does your own experience tell you that you may be discounting?"
+      ]
+    },
+    {
+      "key": "evaluation",
+      "title": "Evaluation",
+      "stage": "Explore",
+      "purpose": "Examine fit, importance, trade-offs and meaning against the client's criteria.",
+      "useWhen": "The client is weighing choices, consequences or alignment.",
+      "listenFor": "What criteria actually matter to the client?",
+      "watch": "Avoid imposing what you think should count as success.",
+      "qs": [
+        "What opportunity do you see in this?",
+        "What is the real challenge from your perspective?",
+        "How well does this fit with what matters to you?",
+        "What would make this choice worthwhile?",
+        "What are the costs as well as the benefits?",
+        "What criteria are you using to judge this?",
+        "What does this choice protect, enable or compromise?",
+        "Which part of your evaluation feels evidence-based, and which part is assumption?"
+      ]
+    },
+    {
+      "key": "exploration",
+      "title": "Exploration",
+      "stage": "Explore",
+      "purpose": "Open territory the client has not yet considered.",
+      "useWhen": "The conversation is circling familiar explanations or one narrow path.",
+      "listenFor": "What part of the landscape has not been visited yet?",
+      "watch": "Exploration is not endless; return to what serves the agreed outcome.",
+      "qs": [
+        "What have you not explored yet?",
+        "What other angle deserves attention?",
+        "What are you curious about but avoiding?",
+        "What possibility have you dismissed too quickly?",
+        "What changes if we look at this from a different part of the system?",
+        "What question about this situation have you not asked yourself?",
+        "What seems outside the frame you are currently using?",
+        "If there were one more useful direction to explore, what might it be?"
+      ]
+    },
+    {
+      "key": "for-instance",
+      "title": "For Instance",
+      "stage": "Explore",
+      "purpose": "Use hypothetical or alternative situations to loosen fixed thinking.",
+      "useWhen": "The client is locked into one narrative or believes there is only one way.",
+      "listenFor": "What becomes visible when the situation is varied?",
+      "watch": "Keep hypotheticals connected to the client's reality rather than fantasy for its own sake.",
+      "qs": [
+        "If you encountered this situation again tomorrow, what might you try differently?",
+        "If someone you respect faced this, what might they notice?",
+        "If the usual constraint disappeared for a week, what would you experiment with?",
+        "If you could rewind one part of this situation, where would you pause?",
+        "If you had permission to respond differently, what would you do?",
+        "If you were advising your future self, what would you suggest exploring?",
+        "If the opposite approach were possible, what could it teach you?",
+        "If you could test one alternative without long-term consequences, what would you test?"
+      ]
+    },
+    {
+      "key": "anticipation",
+      "title": "Anticipation",
+      "stage": "Expand",
+      "purpose": "Help the client imagine possibility, energy and a desired future.",
+      "useWhen": "The conversation is dominated by risk, limitation or current-state thinking.",
+      "listenFor": "What future has enough energy to pull the client forward?",
+      "watch": "Do not use optimism to bypass legitimate fear or constraint.",
+      "qs": [
+        "What becomes possible if this goes better than you currently expect?",
+        "What future are you quietly hoping for?",
+        "What possibility here gives you the most energy?",
+        "Imagine this is working six months from now—what is different?",
+        "What would you be excited to tell someone had changed?",
+        "If fear became quieter for a moment, what future would you consider?",
+        "What are you drawn toward, not only trying to get away from?",
+        "What would make this feel worth the effort?"
+      ]
+    },
+    {
+      "key": "perspective",
+      "title": "Perspective",
+      "stage": "Expand",
+      "purpose": "Create distance from the current viewpoint and invite a broader frame.",
+      "useWhen": "The client is fused with one interpretation, time horizon or role.",
+      "listenFor": "Which perspective could create useful distance?",
+      "watch": "Reframing should expand choice, not persuade the client to adopt your view.",
+      "qs": [
+        "What might this look like from five years in the future?",
+        "What would the person you most respect notice here?",
+        "How does this matter in the bigger picture of your life or work?",
+        "What changes when you view this as a chapter rather than the whole story?",
+        "What would you say about this if you were less emotionally close to it?",
+        "How might someone with different priorities see the same situation?",
+        "What does this situation look like from the other side of the relationship?",
+        "If you zoomed out one level, what becomes visible?"
+      ]
+    },
+    {
+      "key": "fun",
+      "title": "Fun as Perspective",
+      "stage": "Expand",
+      "purpose": "Use lightness, play and creativity to loosen seriousness when appropriate.",
+      "useWhen": "The conversation is rigid or over-controlled and the client is open to play.",
+      "listenFor": "Could a lighter frame unlock thinking without minimizing the issue?",
+      "watch": "Never use humour to dismiss pain, risk or seriousness.",
+      "qs": [
+        "If this could be 20% more enjoyable, what would change?",
+        "What would make this experiment feel playful rather than heavy?",
+        "What is absurd or unexpectedly funny about the situation?",
+        "If you designed the most enjoyable version of this task, what would it include?",
+        "What would your more playful self try?",
+        "How might curiosity replace some of the pressure here?",
+        "If you were teaching someone to bring lightness to this, what would you suggest?",
+        "What small element of fun could make the next step easier to begin?"
+      ]
+    },
+    {
+      "key": "predictions",
+      "title": "Predictions",
+      "stage": "Expand",
+      "purpose": "Surface expectations and assumptions about what may happen next.",
+      "useWhen": "The client is acting on an untested forecast or fear.",
+      "listenFor": "What future prediction is driving today's behaviour?",
+      "watch": "Treat predictions as hypotheses, not facts.",
+      "qs": [
+        "What do you expect will happen if nothing changes?",
+        "What are you predicting other people will do?",
+        "How confident are you in that prediction?",
+        "What evidence supports your expectation—and what challenges it?",
+        "Where do you think this path leads if you continue?",
+        "What outcome are you preparing for as though it were certain?",
+        "What is the best plausible outcome? What is the difficult plausible outcome?",
+        "What prediction would you most like to test rather than assume?"
+      ]
+    },
+    {
+      "key": "resources",
+      "title": "Resources",
+      "stage": "Expand",
+      "purpose": "Reconnect the client with support, knowledge, relationships and existing capability.",
+      "useWhen": "The client sees the challenge but not what is already available to them.",
+      "listenFor": "What resources exist inside and around the client?",
+      "watch": "Resources are broader than people or money; include strengths, information and permission.",
+      "qs": [
+        "What do you already have that could help?",
+        "Who could offer perspective, support or access?",
+        "What strength have you used successfully in a similar situation?",
+        "What information would make the next decision easier?",
+        "What resource are you overlooking because it feels too obvious?",
+        "Where could you learn what you do not yet know?",
+        "What relationship could you activate rather than carry this alone?",
+        "What internal resource—courage, patience, curiosity, discipline—would help most now?"
+      ]
+    },
+    {
+      "key": "options",
+      "title": "Options",
+      "stage": "Expand",
+      "purpose": "Generate multiple ways forward before evaluating or committing.",
+      "useWhen": "The client has one solution, no solution or a false either/or.",
+      "listenFor": "Can we create enough choice before deciding?",
+      "watch": "Do not flood the client with options when they need clarity or emotion to be processed first.",
+      "qs": [
+        "What are three possible ways forward?",
+        "What option would you consider if the obvious one were unavailable?",
+        "What could you do less of, not only more of?",
+        "What is a smaller option than the one you are currently imagining?",
+        "What could you combine from two different approaches?",
+        "What option protects what matters most while reducing the downside?",
+        "What would you try if you did not need to get it perfect first time?",
+        "What choice have you not allowed yourself to consider yet?"
+      ]
+    },
+    {
+      "key": "outcomes",
+      "title": "Outcomes",
+      "stage": "Focus",
+      "purpose": "Clarify the desired result, experience or change the client wants.",
+      "useWhen": "The conversation needs a destination, success definition or decision criterion.",
+      "listenFor": "What does the client actually want—not merely want to stop?",
+      "watch": "Do not force a measurable goal when the useful outcome is insight or acceptance.",
+      "qs": [
+        "What do you want to be different?",
+        "What would a meaningful outcome look like for you?",
+        "How will you recognise progress?",
+        "What do you want to have, know, feel or be able to do?",
+        "What is the outcome beneath the first outcome you named?",
+        "What would success make possible that is not possible now?",
+        "What part of this outcome is within your influence?",
+        "If our conversation helped move one thing, what should that be?"
+      ]
+    },
+    {
+      "key": "planning",
+      "title": "Planning",
+      "stage": "Move",
+      "purpose": "Turn chosen direction into a workable sequence without over-engineering it.",
+      "useWhen": "The client has decided what they want but needs structure.",
+      "listenFor": "What is enough planning to create movement?",
+      "watch": "Do not turn coaching into project management unless that is what the client asks for.",
+      "qs": [
+        "What needs to happen first?",
+        "What sequence would make this easier to execute?",
+        "What is the smallest useful plan you can commit to?",
+        "What needs a decision before action can begin?",
+        "What could derail the plan, and how will you account for it?",
+        "What would make the plan realistic in your actual week?",
+        "What needs to be scheduled rather than merely intended?",
+        "What is the next milestone that would tell you the plan is moving?"
+      ]
+    },
+    {
+      "key": "implementation",
+      "title": "Implementation",
+      "stage": "Move",
+      "purpose": "Translate intention into conditions, support and execution details.",
+      "useWhen": "The client knows the direction but action may fail without practical support.",
+      "listenFor": "What must be true for this to happen in real life?",
+      "watch": "Implementation questions should support ownership, not micromanage the client.",
+      "qs": [
+        "What will you actually do next?",
+        "When and where will you do it?",
+        "What support will make follow-through more likely?",
+        "What needs to be prepared before you start?",
+        "Who needs to know or be involved?",
+        "What will you do when the first obstacle appears?",
+        "What can you remove from your environment to make this easier?",
+        "What evidence will tell you implementation is working?"
+      ]
+    },
+    {
+      "key": "taking-action",
+      "title": "Taking Action",
+      "stage": "Move",
+      "purpose": "Strengthen ownership, commitment and an immediate next move.",
+      "useWhen": "The client has enough awareness and is ready to choose action.",
+      "listenFor": "What action is genuinely theirs to choose now?",
+      "watch": "Do not push action to avoid sitting with unresolved awareness.",
+      "qs": [
+        "What action are you choosing?",
+        "What will you do before we speak again?",
+        "What is the first move you are willing to make?",
+        "When will you begin?",
+        "What will you say no to so this action has space?",
+        "What commitment feels strong enough to matter and realistic enough to keep?",
+        "What will you do if motivation is lower than it is right now?",
+        "What would make you leave this conversation and act rather than just agree?"
+      ]
+    },
+    {
+      "key": "learning",
+      "title": "Learning",
+      "stage": "Learn",
+      "purpose": "Extract learning from experience and turn it into future capability.",
+      "useWhen": "A decision, action or experience has produced useful evidence.",
+      "listenFor": "What has changed in how the client understands themselves or the situation?",
+      "watch": "Do not manufacture a lesson from every difficult experience.",
+      "qs": [
+        "What have you learned about yourself through this?",
+        "What do you understand now that you did not understand before?",
+        "What would you do differently next time?",
+        "What assumption changed because of what happened?",
+        "What skill or capability are you building here?",
+        "What did the experience teach you about what works for you?",
+        "What learning do you want to carry into a different situation?",
+        "What would make this learning visible in your behaviour?"
+      ]
+    },
+    {
+      "key": "integration",
+      "title": "Integration",
+      "stage": "Learn",
+      "purpose": "Connect insights so they become coherent and usable beyond the session.",
+      "useWhen": "Several insights have emerged and need to be connected.",
+      "listenFor": "How do these pieces fit together for the client?",
+      "watch": "Integration is not the coach summarising the client's meaning for them.",
+      "qs": [
+        "What are you taking away from all of this?",
+        "How do the different pieces connect for you now?",
+        "What new story are you telling yourself about this?",
+        "What do you want to remember when the old pattern returns?",
+        "What insight feels most important to integrate into daily life?",
+        "How will you remind yourself of what you discovered here?",
+        "What changed in your understanding during this conversation?",
+        "What will help this insight become practice rather than a good thought?"
+      ]
+    },
+    {
+      "key": "summary",
+      "title": "Summary",
+      "stage": "Learn",
+      "purpose": "Help the client name the essence, progress and unfinished work in their own words.",
+      "useWhen": "The conversation is closing, transitioning or becoming complex.",
+      "listenFor": "What does the client want to name as the essence of the work?",
+      "watch": "Avoid ending with the coach's summary when the client's synthesis is more valuable.",
+      "qs": [
+        "How would you summarize what matters most from this conversation?",
+        "What is your clearest conclusion right now?",
+        "What shifted for you?",
+        "What remains unresolved or worth returning to?",
+        "What are the two or three things you want to leave with?",
+        "How would you describe the progress you made today?",
+        "What are you seeing now that you were not seeing at the start?",
+        "If you had to give this conversation a title, what would it be?"
+      ]
+    }
+  ]
+}

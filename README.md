@@ -88,7 +88,7 @@ that were never actually played. Exports include a note explaining this.
 ## Coaching behaviour
 
 `coaching.py` contains the editable behavioural instructions. They ask the model
-to establish the client's desired outcome, listen to their language, offer tentative
+to remain in coaching mode without supplying solutions, establish the client's desired outcome, listen to their language, offer tentative
 reflections, invite correction, ask one open question at a time, seek permission
 before an exercise/challenge, and let clients choose their own actions.
 
@@ -99,7 +99,7 @@ Examples of intended quality (illustrative, not canned scripts):
 - Client: “I don't know. I need a moment.”
   Coach: “Take your time.” Then silence.
 - Client: “Just tell me what I should do.”
-  Coach: “Would you prefer some ideas, or space to explore your own options?”
+  Coach: “I can help you think it through; the choice stays yours. What feels most important to you in this decision?”
 
 This is an **AI reflection partner informed by ICF principles**. It is not an
 ICF-certified coach, therapy, or a substitute for qualified human support. Prompt
@@ -151,7 +151,7 @@ Before calling this a release:
 2. Test live English/Hindi sessions, quiet speech, ambient noise, pauses, interrupt,
    quota errors and network loss. Verify client words do not get cut off.
 3. Review at least ten realistic coaching conversations for agenda partnership,
-   one-question pacing, non-leading language, assumptions, advice consent, closure,
+   one-question pacing, non-leading language, assumptions, client-led brainstorming, closure,
    emotional distress and safe escalation. Record failures and iterate.
 4. Check the new Settings window, consent controls, tooltips, and orb layout at 100%, 125% and 150% Windows display scaling. Current minimum
    window is 1080×700 logical pixels; sidebar settings scroll for shorter displays.
@@ -171,3 +171,30 @@ evaluation. These are not implemented in this prototype.
 - Voice and transcription API: https://ai.google.dev/gemini-api/docs/live-api/capabilities
 
 The coaching prompt is original guidance, not a reproduction of ICF's competency text.
+
+## Client-led coaching correction
+
+The initial prompt allowed a switch to advice when a client requested ideas. A live
+test showed that this supplied and anchored the client's options. That switch has
+been removed. Brainstorming now invites the client's ideas; the coach must not add
+a menu of solutions, disguise advice as a question, rank client options, or push
+for an action. Necessary safety support remains available.
+
+For existing installations, replace `coaching.py` and fully restart the app before
+starting a fresh session. Existing live connections retain the previous prompt.
+This is a prompt-level correction, not an enforced output filter. Automated audio
+and turn tests do not establish coaching quality. Re-test the reported scenario
+and the cases in `COACHING-REVIEW.md` with the actual Live model.
+
+## Agile Orbit coaching content
+
+The professional-coaching source pages and interactive JavaScript have been reviewed
+and distilled into `coaching.py`, including client ownership, Empty Cup, listening,
+metaphor, contracting, model restraint, tool use, ethics and closure. All 23 question
+functions inform the runtime instructions. The 184 original website questions are
+preserved for review in `reference/agile-orbit-question-bank.json`, not used as a
+random question generator. See `reference/AGILE-ORBIT-INTEGRATION.md` for scope,
+source revision, adaptations and limits. This is prompt guidance, not model training.
+
+To install this behavioural update, replace **coaching.py**, close the app fully,
+reopen it and start a fresh session. No reinstall or additional dependency is needed.
