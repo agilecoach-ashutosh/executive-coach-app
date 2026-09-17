@@ -5,4 +5,4 @@ if not exist ".venv\Scripts\pythonw.exe" (
   pause
   exit /b 1
 )
-start "Presence Coach" ".venv\Scripts\pythonw.exe" "app.py"
+start "Presence Coach" ".venv\Scripts\pythonw.exe" "launch.py"
