@@ -1,12 +1,10 @@
 """Multi-provider layer for Presence Coach.
 
-Adds Google Gemini and Groq without changing the coaching/scenario/review layers.
-Gemini continues to use the realtime Live API. Groq uses a turn-based pipeline:
-Whisper STT -> chat completion -> Orpheus TTS.
+Google Gemini keeps the native realtime Live API path. Groq uses a turn-based
+voice pipeline: Whisper STT -> Groq-hosted chat model -> Orpheus TTS.
 """
 from __future__ import annotations
 
-import queue
 import threading
 import tkinter as tk
 from tkinter import messagebox, ttk
@@ -30,7 +28,6 @@ from scenarios import build_coachee_prompt, scenario_kickoff
 base = review.base
 _original_init = base.App.__init__
 _original_start = base.App.start
-_original_api_help = base.App.api_help
 _original_forget_key = base.App.forget_key
 _original_generate_review = base.App.generate_coaching_review
 
@@ -63,16 +60,22 @@ def provider_init(self):
 
 def _settings_content(self):
     wraps = [
-        child for child in self.settings.grid_slaves(row=1, column=0)
+        child
+        for child in self.settings.grid_slaves(row=1, column=0)
         if isinstance(child, tk.Frame)
     ]
     if not wraps:
         return None
-    wrap = wraps[0]
-    canvas = next((c for c in wrap.winfo_children() if isinstance(c, tk.Canvas)), None)
-    if not canvas:
+    canvas = next(
+        (child for child in wraps[0].winfo_children() if isinstance(child, tk.Canvas)),
+        None,
+    )
+    if canvas is None:
         return None
-    return next((c for c in canvas.winfo_children() if isinstance(c, tk.Frame)), None)
+    return next(
+        (child for child in canvas.winfo_children() if isinstance(child, tk.Frame)),
+        None,
+    )
 
 
 def _inject_provider_settings(self):
@@ -83,6 +86,7 @@ def _inject_provider_settings(self):
     frames = [child for child in content.winfo_children() if isinstance(child, tk.Frame)]
     if len(frames) < 2:
         return
+
     self._gemini_connection_frame = frames[0]
     self._settings_session_frame = frames[1]
 
@@ -107,15 +111,14 @@ def _inject_provider_settings(self):
         8,
         base.MUTED,
     ).pack(anchor="w", pady=(2, 8))
-    provider_combo = ttk.Combobox(
+    self._provider_combo = ttk.Combobox(
         provider_card,
         textvariable=self.provider,
         values=[GEMINI, GROQ],
         state="readonly",
         style="Presence.TCombobox",
     )
-    provider_combo.pack(fill="x")
-    self._provider_combo = provider_combo
+    self._provider_combo.pack(fill="x")
 
     groq_card = tk.Frame(
         content,
@@ -139,7 +142,25 @@ def _inject_provider_settings(self):
         show="•",
         style="Presence.TEntry",
     )
-    self._groq_key_entry.pack(fill="x", pady=(4, 10))
+    self._groq_key_entry.pack(fill="x", pady=(4, 9))
+
+    tk.Checkbutton(
+        groq_card,
+        text="Remember Groq key securely in Windows Credential Manager",
+        variable=self.remember,
+        bg=base.PANEL,
+        fg=base.MUTED,
+        selectcolor=base.SURFACE,
+        activebackground=base.PANEL,
+        activeforeground=base.INK,
+        font=("Segoe UI", 8),
+    ).pack(anchor="w")
+    self.button(
+        groq_card,
+        "Forget saved Groq key",
+        self.forget_key,
+        compact=True,
+    ).pack(anchor="w", pady=(7, 5))
 
     for label, variable, values in [
         (
@@ -170,8 +191,7 @@ def _inject_provider_settings(self):
 
     self.label(
         groq_card,
-        "Groq Whisper and the LLM are multilingual. Current Orpheus voice output is English-only. "
-        "The existing ‘Remember key’ option stores the selected provider key in Windows Credential Manager.",
+        "Groq Whisper and the LLM are multilingual. Current Orpheus voice output is English-only.",
         8,
         base.MUTED,
     ).pack(anchor="w", pady=(9, 0))
@@ -181,7 +201,11 @@ def _wire_provider_consent(self):
     if not hasattr(self, "consent_bar"):
         return
     check = next(
-        (child for child in self.consent_bar.winfo_children() if isinstance(child, tk.Checkbutton)),
+        (
+            child
+            for child in self.consent_bar.winfo_children()
+            if isinstance(child, tk.Checkbutton)
+        ),
         None,
     )
     if check:
@@ -196,7 +220,10 @@ def _update_provider_ui(self):
         )
         if hasattr(self, "_gemini_connection_frame"):
             self._gemini_connection_frame.pack_forget()
-        if hasattr(self, "_groq_connection_frame") and not self._groq_connection_frame.winfo_manager():
+        if (
+            hasattr(self, "_groq_connection_frame")
+            and not self._groq_connection_frame.winfo_manager()
+        ):
             self._groq_connection_frame.pack(
                 fill="x",
                 padx=22,
@@ -209,7 +236,10 @@ def _update_provider_ui(self):
         )
         if hasattr(self, "_groq_connection_frame"):
             self._groq_connection_frame.pack_forget()
-        if hasattr(self, "_gemini_connection_frame") and not self._gemini_connection_frame.winfo_manager():
+        if (
+            hasattr(self, "_gemini_connection_frame")
+            and not self._gemini_connection_frame.winfo_manager()
+        ):
             self._gemini_connection_frame.pack(
                 fill="x",
                 padx=22,
@@ -289,12 +319,12 @@ def provider_api_help(self):
             card,
             button_text,
             lambda: webbrowser.open(url),
-            primary=(title == "Google Gemini"),
+            primary=(title == GEMINI),
             compact=True,
         ).pack(fill="x", pady=(10, 0))
 
     key_card(
-        "Google Gemini",
+        GEMINI,
         "Gemini Live provides native realtime audio in and out.",
         [
             "Sign in to Google AI Studio.",
@@ -306,7 +336,7 @@ def provider_api_help(self):
         base.AMBER,
     )
     key_card(
-        "Groq",
+        GROQ,
         "Groq uses Whisper STT, a Groq-hosted LLM, and Orpheus TTS.",
         [
             "Sign in to GroqCloud Console.",
@@ -337,6 +367,11 @@ def provider_start(self):
 
     if self.engine and self.engine.is_alive():
         return
+
+    if getattr(self, "practice_mode", "coachee") == "coach" and not self.current_scenario:
+        self.open_scenario_chooser()
+        return
+
     key = self.groq_key.get().strip()
     if not key:
         self.open_settings()
@@ -358,7 +393,10 @@ def provider_start(self):
         if not 1 <= pause <= 60 or not .001 <= threshold <= .5:
             raise ValueError()
     except ValueError:
-        messagebox.showerror("Settings", "Use a pause from 1–60 seconds and threshold from 0.001–0.5.")
+        messagebox.showerror(
+            "Settings",
+            "Use a pause from 1–60 seconds and threshold from 0.001–0.5.",
+        )
         return
 
     if not self.confirm_unsaved():
@@ -385,14 +423,12 @@ def provider_start(self):
     self.connection_state.set("●  Connecting · Groq")
 
     english_voice_constraint = (
-        "\n\nPROVIDER VOICE CONSTRAINT\nThis Groq session currently uses English-only Orpheus TTS. "
+        "\n\nPROVIDER VOICE CONSTRAINT\n"
+        "This Groq session currently uses English-only Orpheus TTS. "
         "Understand multilingual user speech when possible, but produce spoken responses in natural English."
     )
 
     if getattr(self, "practice_mode", "coachee") == "coach":
-        if not self.current_scenario:
-            self.open_scenario_chooser()
-            return
         prompt = build_coachee_prompt(self.current_scenario) + english_voice_constraint
         input_role = "Coach"
         output_role = "Coachee"
@@ -465,7 +501,10 @@ def provider_generate_review(self):
                 messages=[
                     {
                         "role": "system",
-                        "content": "You are a rigorous developmental reviewer of professional coaching practice. Follow the requested evidence boundaries exactly.",
+                        "content": (
+                            "You are a rigorous developmental reviewer of professional coaching practice. "
+                            "Follow the requested evidence boundaries exactly."
+                        ),
                     },
                     {"role": "user", "content": prompt},
                 ],
