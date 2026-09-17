@@ -51,7 +51,7 @@ Then:
 
 1. Scroll down to **Files**.
 2. Find the **Windows** section.
-3. Click **Windows installer (64-bit)** — this is the recommended Windows installer.
+3. Click **Windows installer (64-bit)**.
 4. Run the downloaded `.exe` and complete the installation as described above.
 
 **Why Python 3.12.10?** It is the last Python 3.12 release that provides an official Windows binary installer. Later Python 3.12 security releases are source-only.
@@ -99,6 +99,7 @@ Inside the extracted Presence Coach folder:
    - create its own `.venv` environment,
    - install all required packages,
    - install Gemini/Groq dependencies,
+   - install Word transcript and MP3 export support,
    - create a **Presence Coach** shortcut on your Desktop.
 5. Internet access is required during this setup.
 6. Wait until you see:
@@ -289,6 +290,41 @@ This mode is designed for coaching practice and mentor-coaching discussion. An A
 
 ---
 
+# Transcript and audio export
+
+Presence can export two reflection artifacts after a session.
+
+## Word transcript (.docx)
+
+**Export transcript** now creates a Microsoft Word `.docx` file instead of a plain-text transcript.
+
+The Word document contains one table with these three headers:
+
+| Speaker (Coach / Coachee) | Timestamp | Transcript |
+| --- | --- | --- |
+| Coach | 00:00:08 | What would make this conversation useful for you today? |
+| Coachee | 00:00:17 | I want to understand why I keep avoiding this conversation. |
+
+The timestamp is **elapsed session time from the beginning of the session**, not the computer's clock time. It uses `HH:MM:SS`, so a row at two minutes and seventeen seconds appears as `00:02:17`.
+
+Only Coach and Coachee dialogue is written into the Word table. Internal/session-note rows are not treated as speakers.
+
+## Session audio (.mp3)
+
+For sessions started with the current export-enabled version, Presence keeps the human microphone audio and the AI audio that was actually played **in memory during that session**.
+
+After an **I am a Coach** session ends, the Session Review screen provides:
+
+**Export session audio (.mp3)**
+
+The exported MP3 combines both sides of the conversation on the original session timeline so it can be replayed for reflection or mentor-coaching discussion.
+
+Presence does not automatically save session audio. The MP3 is written only when you explicitly choose **Export session audio (.mp3)**.
+
+Typed messages naturally have no spoken audio of their own, although they still appear in the Word transcript.
+
+---
+
 # Coach Practice review
 
 After an **I am a Coach** session ends, Presence opens a Session Review screen.
@@ -304,7 +340,13 @@ It currently shows descriptive metrics such as:
 - longest Coach turn,
 - interruption notes.
 
-You can also request a developmental review against an **ACC**, **PCC**, or **MCC** practice lens.
+The review screen also lets you:
+
+- **Export transcript (.docx)**
+- **Export session audio (.mp3)**
+- **Export review**
+
+You can request a developmental review against an **ACC**, **PCC**, or **MCC** practice lens.
 
 The review uses only the visible transcript, visible scenario brief, and descriptive metrics. It does not receive the simulated client's hidden persona.
 
@@ -358,7 +400,7 @@ If you originally downloaded Presence as a ZIP, the simplest update method is:
 3. Run **Setup.cmd** again.
 4. Start Presence from the newly created Desktop shortcut.
 
-If you use Git, you can instead run:
+If you use Git, run:
 
 ```powershell
 git pull
@@ -366,6 +408,8 @@ git pull
 ```
 
 Then fully close Presence and reopen it.
+
+**Important:** Word and MP3 export add new Python packages, so existing installations must either rerun **Setup.cmd** or run the dependency-install command above after pulling this update.
 
 ---
 
@@ -391,6 +435,10 @@ Open **Settings** in Presence and select the correct devices. Also check Windows
 
 Use the **ⓘ** button in Presence to open the correct provider key page. Confirm that the selected provider matches the key you pasted.
 
+### Export audio button is disabled
+
+Audio is available only for a session that was started after the export-enabled version of Presence was launched. Start a new session, finish it normally, and open Session Review again.
+
 ---
 
 # Privacy and API keys
@@ -398,9 +446,12 @@ Use the **ⓘ** button in Presence to open the correct provider key page. Confir
 - With **Gemini**, live audio/text is processed by Google Gemini.
 - With **Groq**, spoken turns are sent to Groq Whisper; conversation text is sent to the selected Groq chat model; AI reply text is sent to Groq Orpheus for speech generation.
 - A post-session review sends the visible transcript and descriptive metrics only when you explicitly request the review.
-- Conversations remain in application memory unless exported.
-- Exported transcript/review files are ordinary unencrypted text files.
-- Presence does not currently save raw session recordings.
+- Transcript content and session audio are retained in application memory for the active session so you can choose whether to export them.
+- Presence does **not** automatically save the session recording to disk.
+- **Export transcript** writes a Word `.docx` file only when you choose to export.
+- **Export session audio** writes an MP3 file only when you choose to export.
+- **Export review** writes the generated review when you choose to export it.
+- Exported DOCX, MP3, and review files are not encrypted by Presence. Store them appropriately for your coaching/privacy context.
 - Saved API keys use the operating-system keyring / Windows Credential Manager.
 
 Provider availability, free quotas, limits, pricing, models, and supported languages are controlled by Google and Groq and may change.
@@ -412,16 +463,18 @@ Provider availability, free quotas, limits, pricing, models, and supported langu
 Current source structure:
 
 ```text
-app.py              Base Tkinter UI
-engine.py           Gemini Live audio transport
-launch.py           Performance-optimized orb/dialog layer
-practice_mode.py    Coach/Coachee role selection and simulated coachee mode
-practice_review.py  Post-session metrics/review UI
-provider_mode.py    Gemini/Groq provider selection and current application entry point
-groq_engine.py      Groq Whisper → LLM → Orpheus voice engine
-coaching.py         Presence-as-coach behavioural instructions and Transcript model
-scenarios.py        Simulated professional-coachee scenarios
-reviewer.py         Metrics + ACC/PCC/MCC developmental review prompt
+app.py                 Base Tkinter UI
+engine.py              Gemini Live audio transport + session-audio capture
+launch.py              Performance-optimized orb/dialog layer
+practice_mode.py       Coach/Coachee role selection and simulated coachee mode
+practice_review.py     Post-session metrics/review UI
+provider_mode.py       Gemini/Groq provider selection
+session_export.py      Word-table transcript + in-memory MP3 recorder/export helpers
+session_export_mode.py Current application entry point and export UI layer
+groq_engine.py         Groq Whisper → LLM → Orpheus voice engine + audio capture
+coaching.py            Presence-as-coach behavioural instructions and Transcript model
+scenarios.py           Simulated professional-coachee scenarios
+reviewer.py            Metrics + ACC/PCC/MCC developmental review prompt
 ```
 
 Run automated tests with:
@@ -430,7 +483,7 @@ Run automated tests with:
 python -m unittest discover -s tests -v
 ```
 
-The Windows build workflow packages `provider_mode.py` using PyInstaller and Inno Setup. Hardware mocks in automated tests do not replace real microphone/speaker and live-provider testing.
+The Windows build workflow packages `session_export_mode.py` using PyInstaller and Inno Setup. Hardware mocks and export unit tests do not replace real microphone/speaker and live-provider testing.
 
 ---
 
