@@ -58,7 +58,7 @@ Gemini uses its Live API for native real-time audio conversation.
 Current default model:
 
 ```text
-gemini-3.1-flash-live-preview
+gemini-3.8-live
 ```
 
 ### Groq pipeline
@@ -186,6 +186,7 @@ Speaking share is estimated from transcript word counts; it is not measured audi
 - With **Groq**, spoken turns are sent to Groq Whisper, conversation text is sent to the selected Groq chat model, and reply text is sent to Groq Orpheus for speech generation.
 - A post-session review sends the visible transcript and descriptive metrics only when the user explicitly requests the review.
 - Transcript content and session audio remain in application memory during the active session so the user can decide whether to export them.
+- The Groq speech pipeline uploads and plays WAV data from memory; it does not create temporary session-audio files.
 - Presence does not automatically save the session recording to disk.
 - Exported Word and MP3 files are not encrypted by Presence and should be stored appropriately.
 - Saved API keys use Windows Credential Manager through the operating-system keyring.
