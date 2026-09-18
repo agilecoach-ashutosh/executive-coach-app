@@ -126,6 +126,30 @@ def build_review_prompt(level: str, rows, metrics: SessionMetrics, scenario=None
         )
 
     transcript = transcript_for_review(rows)
+
+    if level == "ACC":
+        behavior_output = """MARKER / BEHAVIORAL EVIDENCE
+Review all 20 ACC observed coaching behaviors A3.1 through A8.3. Do not include Competency 1 or Competency 2 in this section.
+For every A3.1-A8.3 item, use exactly this format:
+A#.## — short behavior name — EXCEEDS THE STANDARD / MEETS THE STANDARD / BELOW THE STANDARD / DOES NOT MEET STANDARD / N/A
+Evidence: exact timestamp(s) copied from the transcript in [HH:MM:SS] form and a concise explanation. If the rating reflects an important absence, state the missing evidence plainly.
+Development note: include a concise developmental suggestion for BELOW THE STANDARD or DOES NOT MEET STANDARD; otherwise include only when useful.
+
+ACC-specific rules:
+- Use only the five ratings above for A3.1-A8.3.
+- Competency 1 is handled as two qualifiers in the COMPETENCY SYNTHESIS: Q1 Ethics = OBSERVED / NOT OBSERVED; Q2 Coaching role = OBSERVED / NOT OBSERVED.
+- Competency 2 is NOT RATED from this single session. State that explicitly in the COMPETENCY SYNTHESIS.
+- Do not collapse several ACC behaviors into one generic competency observation; rate each behavior separately.
+- A rating attached to a transcript turn must be supported by that exact turn or a clearly cited set of turns, not by a broad session-wide time range."""
+    else:
+        behavior_output = """MARKER / BEHAVIORAL EVIDENCE
+Review every current MSR behavioral statement in the selected framework that can reasonably be evaluated from this session. For each item use this compact format:
+[Competency + short behavior name] — OBSERVED / PARTIAL EVIDENCE / NOT OBSERVED / NO OPPORTUNITY / NOT ASSESSABLE
+Evidence: exact timestamp(s) copied from the transcript in [HH:MM:SS] form, followed by a concise explanation.
+Development note: only when useful.
+
+Use the current MSR behavior descriptions supplied above. Do not invent or reintroduce legacy marker numbers unless an identifier is explicitly present in the current framework."""
+
     return f"""You are reviewing a simulated professional coaching practice transcript.
 The human user is the COACH. The other speaker is a simulated COACHEE.
 
@@ -185,23 +209,15 @@ WHAT THE COACH DID WELL
 Give 3-5 evidence-based observations with competency/behavior references and timestamps where possible.
 Do not praise vaguely.
 
-MARKER / BEHAVIORAL EVIDENCE
-Review every current MSR behavioral statement in the selected framework that can reasonably
-be evaluated from this session. For each item use this compact format:
-[Competency + short behavior name] — OBSERVED / PARTIAL EVIDENCE / NOT OBSERVED / NO OPPORTUNITY / NOT ASSESSABLE
-Evidence: exact timestamp(s) copied from the transcript in [HH:MM:SS] form, followed by a concise explanation.
-Development note: only when useful.
-
-For ACC, when the supplied framework supports the ICF mentor-observation performance scale,
-prefer these behavior ratings where applicable: EXCEEDS THE STANDARD / MEETS THE STANDARD /
-BELOW THE STANDARD / DOES NOT MEET STANDARD / N/A. Continue to use NOT ASSESSABLE or
-NO OPPORTUNITY when the transcript genuinely cannot support a performance judgment.
-
-Use the current MSR behavior descriptions supplied above. Do not invent or reintroduce
-legacy ACC/PCC marker numbers unless an identifier is explicitly present in the current framework.
+{behavior_output}
 
 COMPETENCY SYNTHESIS
-For Competencies 1 and 3-8, summarize the pattern of evidence using:
+For ACC:
+- Start with: Competency 1 — Q1 Ethics: OBSERVED / NOT OBSERVED; Q2 Coaching role: OBSERVED / NOT OBSERVED.
+- Then state: Competency 2 — NOT RATED FROM A SINGLE OBSERVED SESSION.
+- For Competencies 3-8, summarize the pattern across the behavior ratings.
+
+For PCC/MCC, summarize Competencies 1 and 3-8 using:
 Competency name — Evidence strength: Strong / Developing / Limited evidence / Not assessable
 Observed evidence: ...
 Development opportunity: ...
