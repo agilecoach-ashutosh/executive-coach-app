@@ -12,6 +12,7 @@ from docx.shared import Inches, Pt
 
 SECTION_HEADINGS = (
     "WHAT THE COACH DID WELL",
+    "AREAS FOR DEVELOPMENT",
     "MARKER / BEHAVIORAL EVIDENCE",
     "COMPETENCY SYNTHESIS",
     "PATTERNS TO WATCH",
@@ -561,6 +562,9 @@ def export_review_docx(
 
     _add_heading(doc, "What the Coach Did Well", 1)
     _add_text_lines(doc, sections.get("WHAT THE COACH DID WELL", []))
+
+    _add_heading(doc, "Areas for Development", 1)
+    _add_text_lines(doc, sections.get("AREAS FOR DEVELOPMENT", []))
 
     _add_heading(doc, "Competency Synthesis", 1)
     if competency_rows:
