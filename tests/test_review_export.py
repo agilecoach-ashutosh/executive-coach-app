@@ -214,7 +214,7 @@ class ReviewExportTests(unittest.TestCase):
             )
             doc = Document(path)
 
-            self.assertGreaterEqual(len(doc.tables), 3)
+            self.assertGreaterEqual(len(doc.tables), 4)
             transcript_table = doc.tables[1]
             rows_by_stamp = {
                 row.cells[1].text: [cell.text for cell in row.cells]
@@ -226,14 +226,87 @@ class ReviewExportTests(unittest.TestCase):
             self.assertIn("OBSERVED", rows_by_stamp["00:00:34"][3])
             self.assertIn("Explores Client's Chosen Topic", rows_by_stamp["00:00:59"][3])
 
+            acc_behavior_headers = [cell.text for cell in doc.tables[2].rows[0].cells]
+            self.assertEqual(
+                acc_behavior_headers,
+                ["Behavior", "Rating", "Timestamp / Evidence", "Developmental feedback"],
+            )
+
             competency_text = " ".join(
-                cell.text for row in doc.tables[2].rows for cell in row.cells
+                cell.text for row in doc.tables[3].rows for cell in row.cells
             )
             paragraph_text = " ".join(paragraph.text for paragraph in doc.paragraphs)
 
             self.assertIn("Developing", competency_text)
             self.assertIn("Advice-giving", paragraph_text)
             self.assertIn("The session contains", paragraph_text)
+
+
+    def test_acc_word_review_uses_observation_rating_table(self):
+        acc_review = """DEVELOPMENTAL REVIEW — ACC
+ASSESSMENT BASIS: ICF ACC Session Observation developmental practice
+
+WHAT THE COACH DID WELL
+- Clean inquiry at [00:00:34].
+
+MARKER / BEHAVIORAL EVIDENCE
+A3.1 — Explores client topic — MEETS THE STANDARD
+Evidence: [00:00:34] The coach explores the topic with the client.
+Development note: Stay with the client's language before broadening.
+
+A3.2 — Agrees session outcome — BELOW THE STANDARD
+Evidence: No explicit session outcome agreement found.
+Development note: Partner on a clear client-owned outcome early.
+
+COMPETENCY SYNTHESIS
+Competency 1 — Evidence strength: Strong
+Observed evidence: Q1 Ethics OBSERVED; Q2 Coaching role OBSERVED.
+Development opportunity: None evident from this short sample.
+
+Competency 2 — Evidence strength: Not assessable
+Observed evidence: NOT RATED FROM A SINGLE OBSERVED SESSION.
+Development opportunity: Review across the broader professional journey.
+
+PATTERNS TO WATCH
+- Agreement was not explicit.
+
+THREE HIGH-LEVERAGE PRACTICE EDGES
+- Establish the outcome explicitly.
+
+MOMENTS WORTH REVISITING
+- [00:00:34] Useful topic exploration.
+
+BOTTOM LINE
+Developmental practice review only.
+"""
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "acc-rating-review.docx"
+            export_review_docx(
+                acc_review,
+                path,
+                "ACC",
+                _metrics(),
+                transcript_rows=MARKDOWN_TRANSCRIPT,
+            )
+            doc = Document(path)
+
+            headers = [cell.text for cell in doc.tables[2].rows[0].cells]
+            self.assertEqual(
+                headers,
+                ["Behavior", "Rating", "Timestamp / Evidence", "Developmental feedback"],
+            )
+            first_row = [cell.text for cell in doc.tables[2].rows[1].cells]
+            second_row = [cell.text for cell in doc.tables[2].rows[2].cells]
+
+            self.assertIn("A3.1", first_row[0])
+            self.assertEqual(first_row[1], "Meets the standard")
+            self.assertIn("00:00:34", first_row[2])
+            self.assertIn("Stay with", first_row[3])
+
+            self.assertIn("A3.2", second_row[0])
+            self.assertEqual(second_row[1], "Below the standard")
+            self.assertIn("No explicit session outcome", second_row[2])
+            self.assertIn("clear client-owned outcome", second_row[3])
 
 
 if __name__ == "__main__":

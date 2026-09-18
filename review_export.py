@@ -68,6 +68,8 @@ def _strip_markdown(value: str, *, strip_bullet: bool = False) -> str:
     line = line.replace("***", "").strip()
     line = re.sub(r"^\*+(?=\S)", "", line)
     line = re.sub(r"\*+$", "", line).strip()
+    # Remove any remaining single-asterisk emphasis, e.g. *Evidence:*.
+    line = line.replace("*", "")
 
     if strip_bullet:
         line = re.sub(r"^[-+•]\s*", "", line).strip()
@@ -332,6 +334,58 @@ def _review_cell_text(row: dict[str, str]) -> str:
     return "\n".join(parts)
 
 
+def _display_acc_rating(status: str) -> str:
+    labels = {
+        "EXCEEDS THE STANDARD": "Exceeds the standard",
+        "MEETS THE STANDARD": "Meets the standard",
+        "BELOW THE STANDARD": "Below the standard",
+        "DOES NOT MEET STANDARD": "Does not meet standard",
+        "N/A": "N/A",
+    }
+    return labels.get((status or "").upper(), status or "")
+
+
+def _add_acc_behavior_table(doc: Document, rows: list[dict[str, str]]):
+    """Add the ACC Session Observation-style behavior rating table."""
+    acc_rows = [
+        row for row in rows
+        if re.match(r"^A[3-8]\.\d\b", _display_name(row.get("name", "")), re.IGNORECASE)
+    ]
+    if not acc_rows:
+        acc_rows = rows
+
+    table = doc.add_table(rows=1, cols=4)
+    table.style = "Table Grid"
+    table.autofit = False
+    headers = ("Behavior", "Rating", "Timestamp / Evidence", "Developmental feedback")
+    widths = (Inches(2.55), Inches(1.55), Inches(3.25), Inches(3.0))
+
+    for idx, (header, width) in enumerate(zip(headers, widths)):
+        cell = table.rows[0].cells[idx]
+        cell.width = width
+        paragraph = cell.paragraphs[0]
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = paragraph.add_run(header)
+        run.bold = True
+        run.font.size = Pt(8.5)
+
+    for row in acc_rows:
+        cells = table.add_row().cells
+        values = (
+            _display_name(row.get("name", "")),
+            _display_acc_rating(row.get("status", "")),
+            row.get("evidence", ""),
+            row.get("development", ""),
+        )
+        for idx, (value, width) in enumerate(zip(values, widths)):
+            cells[idx].width = width
+            paragraph = cells[idx].paragraphs[0]
+            paragraph.paragraph_format.space_after = Pt(0)
+            run = paragraph.add_run(str(value))
+            run.font.size = Pt(8.5)
+    return table
+
+
 def _add_annotated_transcript_table(doc: Document, transcript_rows, behavior_rows):
     """Create the review as an extension of the transcript itself."""
     visible_rows = [
@@ -488,7 +542,18 @@ def export_review_docx(
             "Transcript rows were not available to this export. Behavioral evidence is listed below."
         )
 
-    if unmatched:
+    if level == "ACC" and behavior_rows:
+        _add_heading(doc, "ACC Behavioral Observation", 1)
+        scale_note = doc.add_paragraph()
+        scale_run = scale_note.add_run(
+            "ACC behavior ratings for Competencies 3-8 use: Exceeds the standard, Meets the standard, "
+            "Below the standard, Does not meet standard, or N/A. Competency 1 qualifiers and "
+            "Competency 2 limitations are summarized separately below."
+        )
+        scale_run.font.size = Pt(8.5)
+        scale_run.italic = True
+        _add_acc_behavior_table(doc, behavior_rows)
+    elif unmatched:
         _add_heading(doc, "Behavioral observations without a matched transcript timestamp", 2)
         for row in unmatched:
             paragraph = doc.add_paragraph()
