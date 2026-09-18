@@ -5,6 +5,7 @@ import re
 from pathlib import Path
 
 from docx import Document
+from docx.enum.section import WD_ORIENT
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches, Pt
 
@@ -28,12 +29,16 @@ EVIDENCE_STATUSES = (
     "LIMITED EVIDENCE",
     "CONSISTENT",
     "INCONSISTENT",
+    "EXCEEDS THE STANDARD",
+    "MEETS THE STANDARD",
+    "BELOW THE STANDARD",
+    "DOES NOT MEET STANDARD",
+    "N/A",
 )
 
+_STATUS_ALTERNATION = "|".join(re.escape(item) for item in EVIDENCE_STATUSES)
 STATUS_PATTERN = re.compile(
-    r"^(?P<name>.+?)\s+[—-]\s+"
-    r"(?P<status>OBSERVED|PARTIAL EVIDENCE|NOT OBSERVED|NO OPPORTUNITY|"
-    r"NOT ASSESSABLE|LIMITED EVIDENCE|CONSISTENT|INCONSISTENT)\s*$",
+    rf"^(?P<name>.+?)\s+[—-]\s+(?P<status>{_STATUS_ALTERNATION})\s*$",
     re.IGNORECASE,
 )
 
@@ -41,6 +46,8 @@ COMPETENCY_PATTERN = re.compile(
     r"^(?P<name>.+?)\s+[—-]\s+Evidence strength:\s*(?P<strength>.+?)\s*$",
     re.IGNORECASE,
 )
+
+TIMESTAMP_PATTERN = re.compile(r"(?<!\d)(\d{2}:\d{2}:\d{2})(?!\d)")
 
 
 def _clean(value: str) -> str:
@@ -53,14 +60,10 @@ def _strip_markdown(value: str, *, strip_bullet: bool = False) -> str:
     if not line:
         return ""
 
-    # Markdown headings such as: ### MARKER / BEHAVIORAL EVIDENCE
     line = re.sub(r"^#{1,6}\s*", "", line)
-
-    # Convert markdown bullet asterisks before removing emphasis markers.
     if re.match(r"^\*\s+", line):
         line = re.sub(r"^\*\s+", "- ", line)
 
-    # Remove emphasis/backtick markers while retaining their text.
     line = line.replace("**", "").replace("__", "").replace("`", "")
     line = line.replace("***", "").strip()
     line = re.sub(r"^\*+(?=\S)", "", line)
@@ -107,7 +110,7 @@ def split_review_sections(review_text: str) -> dict[str, list[str]]:
 
 
 def parse_behavior_evidence(lines: list[str]) -> list[dict[str, str]]:
-    """Parse MSR behavior blocks from plain text or markdown-formatted AI output."""
+    """Parse behavior blocks from plain text or markdown-formatted AI output."""
     rows: list[dict[str, str]] = []
     current: dict[str, str] | None = None
     field = "evidence"
@@ -140,7 +143,6 @@ def parse_behavior_evidence(lines: list[str]) -> list[dict[str, str]]:
             continue
 
         if current is None:
-            # Preserve unstructured text rather than dropping it.
             current = {
                 "name": "Review narrative",
                 "status": "",
@@ -198,8 +200,6 @@ def parse_competency_synthesis(lines: list[str]) -> list[dict[str, str]]:
             field = "evidence"
             continue
 
-        # Some models use a status after the competency rather than the exact
-        # "Evidence strength:" wording. Preserve that as the strength column.
         status_match = STATUS_PATTERN.match(line)
         if status_match and "competency" in status_match.group("name").lower():
             flush()
@@ -237,14 +237,16 @@ def parse_competency_synthesis(lines: list[str]) -> list[dict[str, str]]:
 
 def _set_document_defaults(doc: Document):
     section = doc.sections[0]
-    section.top_margin = Inches(0.55)
-    section.bottom_margin = Inches(0.55)
-    section.left_margin = Inches(0.55)
-    section.right_margin = Inches(0.55)
+    section.orientation = WD_ORIENT.LANDSCAPE
+    section.page_width, section.page_height = section.page_height, section.page_width
+    section.top_margin = Inches(0.45)
+    section.bottom_margin = Inches(0.45)
+    section.left_margin = Inches(0.45)
+    section.right_margin = Inches(0.45)
 
     normal = doc.styles["Normal"]
     normal.font.name = "Aptos"
-    normal.font.size = Pt(9.5)
+    normal.font.size = Pt(9)
 
     for name, size in (("Title", 18), ("Heading 1", 13), ("Heading 2", 11)):
         style = doc.styles[name]
@@ -308,41 +310,84 @@ def _format_duration(seconds: int) -> str:
     return f"{minutes}:{secs:02d}"
 
 
-def _add_behavior_table(doc: Document, rows: list[dict[str, str]]):
+def _timestamps(value: str) -> set[str]:
+    return set(TIMESTAMP_PATTERN.findall(value or ""))
+
+
+def _review_cell_text(row: dict[str, str]) -> str:
+    parts = []
+    name = row.get("name", "").strip()
+    status = row.get("status", "").strip()
+    evidence = row.get("evidence", "").strip()
+    development = row.get("development", "").strip()
+
+    if name:
+        parts.append(name)
+    if status:
+        parts.append(status)
+    if evidence:
+        parts.append(evidence)
+    if development:
+        parts.append(f"Development: {development}")
+    return "\n".join(parts)
+
+
+def _add_annotated_transcript_table(doc: Document, transcript_rows, behavior_rows):
+    """Create the review as an extension of the transcript itself."""
+    visible_rows = [
+        row for row in (transcript_rows or [])
+        if len(row) >= 3 and row[1] in ("Coach", "Coachee")
+    ]
+
+    observations_by_stamp: dict[str, list[str]] = {}
+    unmatched: list[dict[str, str]] = []
+    for behavior in behavior_rows:
+        stamps = _timestamps(behavior.get("evidence", ""))
+        if not stamps:
+            unmatched.append(behavior)
+            continue
+        review_text = _review_cell_text(behavior)
+        for stamp in stamps:
+            observations_by_stamp.setdefault(stamp, []).append(review_text)
+
     table = doc.add_table(rows=1, cols=4)
     table.style = "Table Grid"
-    headers = ("Competency / behavior", "Evidence status", "Timestamp / evidence", "Development note")
-    widths = (Inches(1.8), Inches(1.25), Inches(3.05), Inches(1.55))
-    for idx, (header, width) in enumerate(zip(headers, widths)):
-        table.rows[0].cells[idx].width = width
-        table.rows[0].cells[idx].text = header
-        for run in table.rows[0].cells[idx].paragraphs[0].runs:
-            run.bold = True
-            run.font.size = Pt(8.5)
+    table.autofit = False
+    headers = ("Speaker", "Timestamp", "Transcript", "Review / ICF Observation")
+    widths = (Inches(0.9), Inches(0.9), Inches(4.0), Inches(4.15))
 
-    for row in rows:
+    for idx, (header, width) in enumerate(zip(headers, widths)):
+        cell = table.rows[0].cells[idx]
+        cell.width = width
+        paragraph = cell.paragraphs[0]
+        paragraph.alignment = WD_ALIGN_PARAGRAPH.CENTER
+        run = paragraph.add_run(header)
+        run.bold = True
+        run.font.size = Pt(8.5)
+
+    for stamp, role, transcript in visible_rows:
         cells = table.add_row().cells
         values = (
-            row.get("name", ""),
-            row.get("status", ""),
-            row.get("evidence", ""),
-            row.get("development", ""),
+            role,
+            stamp,
+            (transcript or "").strip(),
+            "\n\n".join(observations_by_stamp.get(stamp, [])),
         )
         for idx, (value, width) in enumerate(zip(values, widths)):
             cells[idx].width = width
-            cells[idx].text = value
-            for paragraph in cells[idx].paragraphs:
-                paragraph.paragraph_format.space_after = Pt(0)
-                for run in paragraph.runs:
-                    run.font.size = Pt(8.5)
-    return table
+            paragraph = cells[idx].paragraphs[0]
+            paragraph.paragraph_format.space_after = Pt(0)
+            run = paragraph.add_run(str(value))
+            run.font.size = Pt(8.5)
+
+    return table, unmatched
 
 
 def _add_competency_table(doc: Document, rows: list[dict[str, str]]):
     table = doc.add_table(rows=1, cols=4)
     table.style = "Table Grid"
     headers = ("Competency", "Evidence strength", "Observed evidence", "Development opportunity")
-    widths = (Inches(1.65), Inches(1.3), Inches(3.0), Inches(1.7))
+    widths = (Inches(1.75), Inches(1.4), Inches(3.35), Inches(3.4))
     for idx, (header, width) in enumerate(zip(headers, widths)):
         table.rows[0].cells[idx].width = width
         table.rows[0].cells[idx].text = header
@@ -374,8 +419,9 @@ def export_review_docx(
     level: str,
     metrics,
     scenario=None,
+    transcript_rows=None,
 ):
-    """Export the developmental review as a structured Word report with evidence tables."""
+    """Export a developmental review as an annotated transcript plus synthesis."""
     if not (review_text or "").strip():
         raise ValueError("There is no coaching review to export.")
 
@@ -425,18 +471,31 @@ def export_review_docx(
     note_run.italic = True
     note_run.font.size = Pt(8)
 
-    _add_heading(doc, "What the Coach Did Well", 1)
-    _add_text_lines(doc, sections.get("WHAT THE COACH DID WELL", []))
+    _add_heading(doc, "Annotated Transcript", 1)
+    intro = doc.add_paragraph()
+    intro_run = intro.add_run(
+        "The review is attached to the transcript moments that support each observation. "
+        "Blank review cells simply mean no specific behavior-level observation was attached to that turn."
+    )
+    intro_run.font.size = Pt(8.5)
+    intro_run.italic = True
 
-    _add_heading(doc, "Marker / Behavioral Evidence", 1)
-    if behavior_rows:
-        _add_behavior_table(doc, behavior_rows)
+    unmatched = behavior_rows
+    if transcript_rows:
+        _, unmatched = _add_annotated_transcript_table(doc, transcript_rows, behavior_rows)
     else:
         doc.add_paragraph(
-            "The generated review did not provide a parseable behavior-evidence table. "
-            "The original review text is preserved below."
+            "Transcript rows were not available to this export. Behavioral evidence is listed below."
         )
-        _add_text_lines(doc, behavior_lines)
+
+    if unmatched:
+        _add_heading(doc, "Behavioral observations without a matched transcript timestamp", 2)
+        for row in unmatched:
+            paragraph = doc.add_paragraph()
+            paragraph.add_run(_review_cell_text(row))
+
+    _add_heading(doc, "What the Coach Did Well", 1)
+    _add_text_lines(doc, sections.get("WHAT THE COACH DID WELL", []))
 
     _add_heading(doc, "Competency Synthesis", 1)
     if competency_rows:
@@ -453,9 +512,6 @@ def export_review_docx(
         _add_heading(doc, heading.title(), 1)
         _add_text_lines(doc, sections.get(heading, []))
 
-    # If the provider changed formatting enough that the structured parse is sparse,
-    # preserve the complete generated review so the Word export never appears empty
-    # while the on-screen review contains useful content.
     populated_sections = sum(
         1 for heading in SECTION_HEADINGS if any(_clean(x) for x in sections.get(heading, []))
     )
