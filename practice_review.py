@@ -34,6 +34,8 @@ def review_init(self):
     self._review_output = None
     self._review_generate_button = None
     self._review_export_button = None
+    self._review_started_at = None
+    self._review_last_elapsed = -1
 
     self.review_button = self.button(
         self.header,
@@ -50,6 +52,8 @@ def _clear_review_state(self):
     self.practice_session_ended_at = None
     self.practice_review_shown = False
     self.practice_review_text = ""
+    self._review_started_at = None
+    self._review_last_elapsed = -1
     if hasattr(self, "review_button"):
         self.review_button.configure(state="disabled")
 
@@ -373,12 +377,15 @@ def generate_coaching_review(self):
     rows = list(self.transcript.rows)
     scenario = self.current_scenario
 
+    self._review_started_at = time.monotonic()
+    self._review_last_elapsed = -1
     if self._review_generate_button and self._review_generate_button.winfo_exists():
-        self._review_generate_button.configure(state="disabled", text="Reviewing…")
+        self._review_generate_button.configure(state="disabled", text="Reviewing… 0s")
     _set_review_output(
         self,
         f"Reviewing this transcript against the {level} developmental lens…\n\n"
-        "This may take a few moments. The live coachee session is already closed; the reviewer is a separate model call.",
+        "Presence is asking the reviewer for compact structured findings, then it will build the readable review locally. "
+        "Longer transcripts and deeper evidence checks can still take a little time.",
     )
 
     def worker():
@@ -396,9 +403,18 @@ def _poll_review_result(self):
     try:
         status, value = self._review_queue.get_nowait()
     except queue.Empty:
+        started = getattr(self, "_review_started_at", None)
+        if started:
+            elapsed = int(max(0, time.monotonic() - started))
+            if elapsed != getattr(self, "_review_last_elapsed", -1):
+                self._review_last_elapsed = elapsed
+                if self._review_generate_button and self._review_generate_button.winfo_exists():
+                    self._review_generate_button.configure(text=f"Reviewing… {elapsed}s")
         self.after(120, self._poll_review_result)
         return
 
+    self._review_started_at = None
+    self._review_last_elapsed = -1
     if self._review_generate_button and self._review_generate_button.winfo_exists():
         self._review_generate_button.configure(state="normal", text="Generate coaching review")
 
