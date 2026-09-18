@@ -85,8 +85,7 @@ Provider-controlled models, quotas, availability, pricing, and supported languag
 ### Requirements
 
 - Windows 10 or Windows 11, 64-bit; or a supported Intel/Apple Silicon Mac
-- Python 3.12
-- Git
+- Python 3.12 (You can download easily from python org official website)
 - A microphone and speakers or headphones
 - A Google Gemini API key or Groq API key
 
