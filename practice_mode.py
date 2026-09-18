@@ -8,10 +8,19 @@ audio transport. It adds two explicit experiences:
 import random
 import time
 import tkinter as tk
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 import launch as performance
-from scenarios import COACHEE_SCENARIOS, build_coachee_prompt, scenario_kickoff
+from scenarios import (
+    COACHEE_SCENARIOS,
+    DIFFICULTY_LEVELS,
+    PRACTICE_FOCI,
+    SCENARIO_PACKS,
+    build_coachee_prompt,
+    prepare_scenario,
+    scenario_kickoff,
+    scenario_matches,
+)
 
 
 base = performance.base
@@ -206,29 +215,124 @@ def open_scenario_chooser(self, role_dialog=None):
         role_dialog.destroy()
 
     dialog = tk.Toplevel(self)
-    dialog.title('Choose a practice coachee')
+    dialog.title('Presence Coach • Scenario Library')
     dialog.configure(bg=base.BG)
     dialog.transient(self)
-    dialog.minsize(720, 580)
-    _center(dialog, self, 900, 700)
+    dialog.minsize(900, 650)
+    _center(dialog, self, 1120, 780)
 
-    top = tk.Frame(dialog, bg=base.BG)
-    top.pack(fill='x', padx=28, pady=(24, 10))
-    self.label(top, 'Choose a practice client', 21, base.INK, 'bold').pack(side='left')
-    self.button(
-        top,
-        '🎲  Surprise me',
-        lambda: self.select_scenario(random.choice(COACHEE_SCENARIOS), dialog),
-        True,
-        compact=True,
-    ).pack(side='right')
+    search_var = tk.StringVar(master=dialog)
+    pack_var = tk.StringVar(master=dialog, value='All packs')
+    difficulty_var = tk.StringVar(master=dialog, value='Experienced')
+    focus_var = tk.StringVar(master=dialog, value='Full session')
+    count_var = tk.StringVar(master=dialog)
+    difficulty_note = tk.StringVar(master=dialog)
 
+    difficulty_notes = {
+        'Foundation': 'Clearer topic • more openness • lower resistance',
+        'Experienced': 'Realistic ambiguity • mixed self-awareness • natural resistance',
+        'Advanced': 'Guarded • contradictory • deeper context must be earned',
+    }
+
+    header = tk.Frame(dialog, bg=base.BG)
+    header.pack(fill='x', padx=28, pady=(22, 8))
+
+    title_wrap = tk.Frame(header, bg=base.BG)
+    title_wrap.pack(side='left', fill='x', expand=True)
+    self.label(title_wrap, 'Scenario Library', 22, base.INK, 'bold').pack(anchor='w')
     self.label(
-        dialog,
-        'You see only the client brief. The deeper persona and tensions stay hidden.',
+        title_wrap,
+        'Choose the situation. The client keeps the deeper story hidden.',
         9,
         base.MUTED,
-    ).pack(anchor='w', padx=28, pady=(0, 12))
+    ).pack(anchor='w', pady=(3, 0))
+
+    self.button(
+        header,
+        '🎲  Surprise Me',
+        lambda: choose_surprise(),
+        True,
+        compact=True,
+    ).pack(side='right', padx=(14, 0))
+
+    filters = tk.Frame(
+        dialog,
+        bg=base.PANEL,
+        highlightbackground=base.BORDER,
+        highlightthickness=1,
+        padx=16,
+        pady=13,
+    )
+    filters.pack(fill='x', padx=28, pady=(6, 10))
+
+    search_col = tk.Frame(filters, bg=base.PANEL)
+    search_col.grid(row=0, column=0, sticky='ew', padx=(0, 10))
+    self.label(search_col, 'Search', 8, base.MUTED, 'bold').pack(anchor='w', pady=(0, 4))
+    search_entry = ttk.Entry(
+        search_col,
+        textvariable=search_var,
+        style='Presence.TEntry',
+    )
+    search_entry.pack(fill='x')
+
+    pack_col = tk.Frame(filters, bg=base.PANEL)
+    pack_col.grid(row=0, column=1, sticky='ew', padx=5)
+    self.label(pack_col, 'Scenario pack', 8, base.MUTED, 'bold').pack(anchor='w', pady=(0, 4))
+    pack_combo = ttk.Combobox(
+        pack_col,
+        textvariable=pack_var,
+        values=('All packs',) + SCENARIO_PACKS,
+        state='readonly',
+        style='Presence.TCombobox',
+    )
+    pack_combo.pack(fill='x')
+
+    difficulty_col = tk.Frame(filters, bg=base.PANEL)
+    difficulty_col.grid(row=0, column=2, sticky='ew', padx=5)
+    self.label(difficulty_col, 'Difficulty', 8, base.MUTED, 'bold').pack(anchor='w', pady=(0, 4))
+    difficulty_combo = ttk.Combobox(
+        difficulty_col,
+        textvariable=difficulty_var,
+        values=DIFFICULTY_LEVELS,
+        state='readonly',
+        style='Presence.TCombobox',
+    )
+    difficulty_combo.pack(fill='x')
+
+    focus_col = tk.Frame(filters, bg=base.PANEL)
+    focus_col.grid(row=0, column=3, sticky='ew', padx=(10, 0))
+    self.label(focus_col, 'Practice focus', 8, base.MUTED, 'bold').pack(anchor='w', pady=(0, 4))
+    focus_combo = ttk.Combobox(
+        focus_col,
+        textvariable=focus_var,
+        values=PRACTICE_FOCI,
+        state='readonly',
+        style='Presence.TCombobox',
+    )
+    focus_combo.pack(fill='x')
+
+    for column, weight in enumerate((3, 2, 2, 2)):
+        filters.grid_columnconfigure(column, weight=weight)
+
+    meta = tk.Frame(dialog, bg=base.BG)
+    meta.pack(fill='x', padx=30, pady=(0, 7))
+    self.label(meta, '', 8, base.CYAN).pack_forget()
+    count_label = tk.Label(
+        meta,
+        textvariable=count_var,
+        bg=base.BG,
+        fg=base.CYAN,
+        font=('Segoe UI', 8, 'bold'),
+    )
+    count_label.pack(side='left')
+    difficulty_label = tk.Label(
+        meta,
+        textvariable=difficulty_note,
+        bg=base.BG,
+        fg=base.MUTED,
+        font=('Segoe UI', 8),
+    )
+    difficulty_label.pack(side='right')
 
     wrap = tk.Frame(dialog, bg=base.BG)
     wrap.pack(fill='both', expand=True, padx=20, pady=(0, 18))
@@ -244,37 +348,150 @@ def open_scenario_chooser(self, role_dialog=None):
     canvas.bind('<Configure>', lambda event: canvas.itemconfigure(window_id, width=event.width))
     content.bind('<Configure>', lambda _: canvas.configure(scrollregion=canvas.bbox('all')))
 
-    for scenario in COACHEE_SCENARIOS:
-        card = tk.Frame(
-            content,
-            bg=base.PANEL,
-            highlightbackground=base.BORDER,
-            highlightthickness=1,
-            padx=18,
-            pady=14,
+    def filtered_scenarios():
+        return [
+            scenario
+            for scenario in COACHEE_SCENARIOS
+            if scenario_matches(
+                scenario,
+                search_var.get(),
+                pack_var.get(),
+                focus_var.get(),
+            )
+        ]
+
+    def session_scenario(scenario):
+        return prepare_scenario(
+            scenario,
+            difficulty=difficulty_var.get(),
+            practice_focus=focus_var.get(),
         )
-        card.pack(fill='x', padx=8, pady=7)
 
-        text = tk.Frame(card, bg=base.PANEL)
-        text.pack(side='left', fill='both', expand=True)
-        self.label(text, scenario['title'], 12, base.INK, 'bold').pack(anchor='w')
-        self.label(text, scenario['environment'], 8, base.CYAN).pack(anchor='w', pady=(3, 5))
-        tk.Label(
-            text,
-            text=scenario['visible_problem'],
-            bg=base.PANEL,
-            fg=base.MUTED,
-            font=('Segoe UI', 9),
-            justify='left',
-            wraplength=590,
-        ).pack(anchor='w')
+    def choose_scenario(scenario):
+        self.select_scenario(session_scenario(scenario), dialog)
 
-        self.button(
-            card,
-            'Practice',
-            lambda s=scenario: self.select_scenario(s, dialog),
-            compact=True,
-        ).pack(side='right', padx=(16, 0))
+    def choose_surprise():
+        options = filtered_scenarios()
+        if not options:
+            options = list(COACHEE_SCENARIOS)
+        choose_scenario(random.choice(options))
+
+    def tag(parent, text, accent=False):
+        return tk.Label(
+            parent,
+            text=text,
+            bg=base.SURFACE_2,
+            fg=base.CYAN if accent else '#8da0b5',
+            font=('Segoe UI', 7, 'bold'),
+            padx=7,
+            pady=3,
+        )
+
+    def refresh_cards(*_):
+        difficulty_note.set(difficulty_notes.get(difficulty_var.get(), ''))
+        for child in content.winfo_children():
+            child.destroy()
+
+        scenarios = filtered_scenarios()
+        packs = {scenario.get('pack') for scenario in scenarios}
+        count_var.set(
+            f'{len(scenarios)} scenario{"s" if len(scenarios) != 1 else ""}'
+            + (f'  •  {len(packs)} pack{"s" if len(packs) != 1 else ""}' if scenarios else '')
+        )
+
+        if not scenarios:
+            empty = tk.Frame(
+                content,
+                bg=base.PANEL,
+                highlightbackground=base.BORDER,
+                highlightthickness=1,
+                padx=24,
+                pady=28,
+            )
+            empty.grid(row=0, column=0, columnspan=2, sticky='ew', padx=8, pady=8)
+            self.label(empty, 'No scenarios match these filters.', 12, base.INK, 'bold').pack(anchor='w')
+            self.label(
+                empty,
+                'Try another pack, practice focus, or a broader search.',
+                9,
+                base.MUTED,
+            ).pack(anchor='w', pady=(5, 0))
+            return
+
+        for column in range(2):
+            content.grid_columnconfigure(column, weight=1, uniform='scenario')
+
+        for index, scenario in enumerate(scenarios):
+            row, column = divmod(index, 2)
+            card = tk.Frame(
+                content,
+                bg=base.PANEL,
+                highlightbackground=base.BORDER,
+                highlightthickness=1,
+                padx=17,
+                pady=14,
+                height=220,
+            )
+            card.grid(
+                row=row,
+                column=column,
+                sticky='nsew',
+                padx=8,
+                pady=8,
+            )
+            card.grid_propagate(False)
+            card.grid_columnconfigure(0, weight=1)
+            card.grid_rowconfigure(3, weight=1)
+
+            tags = tk.Frame(card, bg=base.PANEL)
+            tags.grid(row=0, column=0, sticky='ew')
+            tag(tags, scenario.get('pack', 'Professional Coaching'), True).pack(side='left')
+            self.label(
+                tags,
+                scenario['environment'],
+                7,
+                base.MUTED,
+            ).pack(side='right')
+
+            self.label(card, scenario['title'], 12, base.INK, 'bold').grid(
+                row=1,
+                column=0,
+                sticky='w',
+                pady=(10, 5),
+            )
+
+            problem = tk.Label(
+                card,
+                text=scenario['visible_problem'],
+                bg=base.PANEL,
+                fg=base.MUTED,
+                font=('Segoe UI', 9),
+                justify='left',
+                anchor='nw',
+                wraplength=430,
+            )
+            problem.grid(row=2, column=0, sticky='new')
+
+            footer = tk.Frame(card, bg=base.PANEL)
+            footer.grid(row=4, column=0, sticky='ew', pady=(10, 0))
+
+            focus_tags = scenario.get('focus', ())[:3]
+            focus_wrap = tk.Frame(footer, bg=base.PANEL)
+            focus_wrap.pack(side='left', fill='x', expand=True)
+            for focus_name in focus_tags:
+                tag(focus_wrap, focus_name).pack(side='left', padx=(0, 5))
+
+            self.button(
+                footer,
+                'Practice',
+                lambda s=scenario: choose_scenario(s),
+                compact=True,
+            ).pack(side='right', padx=(10, 0))
+
+    search_var.trace_add('write', refresh_cards)
+    pack_var.trace_add('write', refresh_cards)
+    difficulty_var.trace_add('write', refresh_cards)
+    focus_var.trace_add('write', refresh_cards)
 
     def wheel(event):
         canvas.yview_scroll(int(-1 * (event.delta / 120)), 'units')
@@ -282,15 +499,20 @@ def open_scenario_chooser(self, role_dialog=None):
     canvas.bind_all('<MouseWheel>', wheel)
 
     def close_dialog():
-        canvas.unbind_all('<MouseWheel>')
+        try:
+            canvas.unbind_all('<MouseWheel>')
+        except tk.TclError:
+            pass
         dialog.destroy()
 
     dialog.protocol('WM_DELETE_WINDOW', close_dialog)
     dialog.bind('<Escape>', lambda _: close_dialog())
+
+    refresh_cards()
     dialog.update_idletasks()
     dialog.lift()
     dialog.focus_force()
-
+    search_entry.focus_set()
 
 def select_scenario(self, scenario, dialog=None):
     if self.dirty and not self.confirm_unsaved():
