@@ -24,6 +24,23 @@ REVIEW_MODELS = (
 
 FAST_GROQ_REVIEW_MODEL = "openai/gpt-oss-20b"
 
+ACC_BEHAVIOR_IDS = (
+    "A3.1", "A3.2", "A3.3", "A3.4",
+    "A4.1", "A4.2", "A4.3",
+    "A5.1", "A5.2", "A5.3", "A5.4",
+    "A6.1", "A6.2", "A6.3",
+    "A7.1", "A7.2", "A7.3",
+    "A8.1", "A8.2", "A8.3",
+)
+
+ACC_RATINGS = {
+    "EXCEEDS THE STANDARD",
+    "MEETS THE STANDARD",
+    "BELOW THE STANDARD",
+    "DOES NOT MEET STANDARD",
+    "N/A",
+}
+
 
 @dataclass
 class SessionMetrics:
@@ -269,8 +286,8 @@ def _extract_json_text(raw_text: str) -> str:
     return text[start : end + 1]
 
 
-def parse_structured_review(raw_text: str) -> dict:
-    """Parse and minimally validate structured model output."""
+def parse_structured_review(raw_text: str, level: str | None = None) -> dict:
+    """Parse and validate structured model output."""
     data = json.loads(_extract_json_text(raw_text))
     if not isinstance(data, dict):
         raise ValueError("Structured review must be a JSON object.")
@@ -297,6 +314,41 @@ def parse_structured_review(raw_text: str) -> dict:
         data["competency_1"] = {}
     if not isinstance(data.get("competency_2", {}), dict):
         data["competency_2"] = {}
+
+    if (level or data.get("level", "")).upper() == "ACC":
+        by_reference = {}
+        for item in behaviors:
+            if not isinstance(item, dict):
+                continue
+            reference = str(item.get("reference", "")).strip().upper()
+            if reference in ACC_BEHAVIOR_IDS:
+                by_reference[reference] = item
+
+        missing = [reference for reference in ACC_BEHAVIOR_IDS if reference not in by_reference]
+        if missing:
+            raise ValueError(
+                "ACC structured review is incomplete; missing behaviors: " + ", ".join(missing)
+            )
+
+        for reference in ACC_BEHAVIOR_IDS:
+            rating = str(by_reference[reference].get("rating", "")).strip().upper()
+            if rating not in ACC_RATINGS:
+                raise ValueError(
+                    f"ACC behavior {reference} returned an invalid rating: {rating or 'blank'}"
+                )
+
+        c1 = data["competency_1"]
+        for key in ("ethics", "coaching_role"):
+            status = str(c1.get(key, "")).strip().upper()
+            if status not in {"OBSERVED", "NOT OBSERVED"}:
+                raise ValueError(f"ACC Competency 1 {key} must be OBSERVED or NOT OBSERVED.")
+
+        c2_status = str(data["competency_2"].get("status", "")).strip().upper()
+        if c2_status != "NOT_RATED_SINGLE_SESSION":
+            raise ValueError("ACC Competency 2 must be NOT_RATED_SINGLE_SESSION.")
+
+        # Preserve the official A3.1-A8.3 order in every downstream report.
+        data["behaviors"] = [by_reference[reference] for reference in ACC_BEHAVIOR_IDS]
 
     return data
 
@@ -439,7 +491,7 @@ def render_structured_review(data: dict, level: str, source_name: str) -> str:
 
 def structured_model_output_to_text(raw_text: str, level: str) -> str:
     source_name, _ = get_review_criteria(level)
-    data = parse_structured_review(raw_text)
+    data = parse_structured_review(raw_text, level)
     return render_structured_review(data, level, source_name)
 
 
@@ -450,7 +502,15 @@ def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, sce
     try:
         for model in REVIEW_MODELS:
             try:
-                response = client.models.generate_content(model=model, contents=prompt)
+                response = client.models.generate_content(
+                    model=model,
+                    contents=prompt,
+                    config={
+                        "response_mime_type": "application/json",
+                        "temperature": 0.1,
+                        "max_output_tokens": 3800,
+                    },
+                )
                 raw = (getattr(response, "text", None) or "").strip()
                 if not raw:
                     raise RuntimeError("returned no text")
