@@ -80,6 +80,13 @@ The session contains some useful inquiry but also a clear move out of the coachi
 """
 
 
+ACC_RATING_REVIEW = """MARKER / BEHAVIORAL EVIDENCE
+A7.3 — Asks clear, open-ended questions, one at a time — MEETS THE STANDARD
+Evidence: [00:00:34] The coach asks one clear open question.
+Development note: Continue keeping questions concise.
+"""
+
+
 def _metrics():
     return SessionMetrics(
         duration_seconds=240,
@@ -97,6 +104,22 @@ def _metrics():
     )
 
 
+SAMPLE_TRANSCRIPT = [
+    ("00:00:18", "Coach", "What would make this conversation useful for you today?"),
+    ("00:00:29", "Coachee", "I want to work out how to handle a difficult conversation."),
+    ("00:02:20", "Coach", "What have you tried, and what else could you do?"),
+    ("00:03:10", "Coach", "What are you noticing now?"),
+]
+
+
+MARKDOWN_TRANSCRIPT = [
+    ("00:00:34", "Coach", "What would you like to explore about this?"),
+    ("00:00:59", "Coach", "What feels most important in that?"),
+    ("00:01:20", "Coachee", "I am worried about how my manager will react."),
+    ("00:01:56", "Coach", "You should escalate this to your director."),
+]
+
+
 class ReviewExportTests(unittest.TestCase):
     def test_sections_and_evidence_parse(self):
         sections = split_review_sections(SAMPLE_REVIEW)
@@ -108,6 +131,13 @@ class ReviewExportTests(unittest.TestCase):
         self.assertIn("00:00:18", behavior[0]["evidence"])
         self.assertEqual(len(synthesis), 1)
         self.assertEqual(synthesis[0]["strength"], "Strong")
+
+    def test_acc_observation_rating_parses(self):
+        sections = split_review_sections(ACC_RATING_REVIEW)
+        behavior = parse_behavior_evidence(sections["MARKER / BEHAVIORAL EVIDENCE"])
+        self.assertEqual(len(behavior), 1)
+        self.assertEqual(behavior[0]["status"], "MEETS THE STANDARD")
+        self.assertIn("00:00:34", behavior[0]["evidence"])
 
     def test_markdown_review_from_provider_parses_into_sections_and_rows(self):
         sections = split_review_sections(MARKDOWN_REVIEW)
@@ -127,7 +157,7 @@ class ReviewExportTests(unittest.TestCase):
         self.assertEqual(synthesis[0]["strength"], "Developing")
         self.assertIn("clear session outcome", synthesis[0]["evidence"])
 
-    def test_word_review_contains_structured_tables(self):
+    def test_word_review_contains_annotated_transcript(self):
         scenario = {
             "title": "Leadership transition",
             "environment": "Technology",
@@ -136,42 +166,71 @@ class ReviewExportTests(unittest.TestCase):
 
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "review.docx"
-            export_review_docx(SAMPLE_REVIEW, path, "PCC", _metrics(), scenario)
+            export_review_docx(
+                SAMPLE_REVIEW,
+                path,
+                "PCC",
+                _metrics(),
+                scenario,
+                SAMPLE_TRANSCRIPT,
+            )
             doc = Document(path)
 
             self.assertGreaterEqual(len(doc.tables), 3)
             metric_headers = [cell.text for cell in doc.tables[0].rows[0].cells]
-            behavior_headers = [cell.text for cell in doc.tables[1].rows[0].cells]
+            transcript_headers = [cell.text for cell in doc.tables[1].rows[0].cells]
             competency_headers = [cell.text for cell in doc.tables[2].rows[0].cells]
 
             self.assertEqual(metric_headers, ["Session metric", "Value"])
             self.assertEqual(
-                behavior_headers,
-                ["Competency / behavior", "Evidence status", "Timestamp / evidence", "Development note"],
+                transcript_headers,
+                ["Speaker", "Timestamp", "Transcript", "Review / ICF Observation"],
             )
             self.assertEqual(
                 competency_headers,
                 ["Competency", "Evidence strength", "Observed evidence", "Development opportunity"],
             )
-            self.assertIn("OBSERVED", [cell.text for cell in doc.tables[1].rows[1].cells])
 
-    def test_markdown_word_review_is_not_empty(self):
+            first_review_row = [cell.text for cell in doc.tables[1].rows[1].cells]
+            self.assertEqual(first_review_row[0], "Coach")
+            self.assertEqual(first_review_row[1], "00:00:18")
+            self.assertIn("What would make this conversation useful", first_review_row[2])
+            self.assertIn("Clear client-owned session outcome", first_review_row[3])
+            self.assertIn("OBSERVED", first_review_row[3])
+
+            coachee_row = [cell.text for cell in doc.tables[1].rows[2].cells]
+            self.assertEqual(coachee_row[0], "Coachee")
+            self.assertEqual(coachee_row[3], "")
+
+    def test_markdown_word_review_attaches_observation_to_matching_timestamp(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "markdown-review.docx"
-            export_review_docx(MARKDOWN_REVIEW, path, "ACC", _metrics())
+            export_review_docx(
+                MARKDOWN_REVIEW,
+                path,
+                "ACC",
+                _metrics(),
+                transcript_rows=MARKDOWN_TRANSCRIPT,
+            )
             doc = Document(path)
 
             self.assertGreaterEqual(len(doc.tables), 3)
-            behavior_text = " ".join(
-                cell.text for row in doc.tables[1].rows for cell in row.cells
-            )
+            transcript_table = doc.tables[1]
+            rows_by_stamp = {
+                row.cells[1].text: [cell.text for cell in row.cells]
+                for row in transcript_table.rows[1:]
+            }
+
+            self.assertIn("INCONSISTENT", rows_by_stamp["00:01:56"][3])
+            self.assertIn("Stays in Coaching Role", rows_by_stamp["00:01:56"][3])
+            self.assertIn("OBSERVED", rows_by_stamp["00:00:34"][3])
+            self.assertIn("Explores Client's Chosen Topic", rows_by_stamp["00:00:59"][3])
+
             competency_text = " ".join(
                 cell.text for row in doc.tables[2].rows for cell in row.cells
             )
             paragraph_text = " ".join(paragraph.text for paragraph in doc.paragraphs)
 
-            self.assertIn("INCONSISTENT", behavior_text)
-            self.assertIn("00:01:56", behavior_text)
             self.assertIn("Developing", competency_text)
             self.assertIn("Advice-giving", paragraph_text)
             self.assertIn("The session contains", paragraph_text)
