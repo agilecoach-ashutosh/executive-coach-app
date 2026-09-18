@@ -117,21 +117,26 @@ Start.cmd
 
 ### macOS setup
 
-Install Python 3.12 from [python.org](https://www.python.org/downloads/macos/). The official installer includes the Tk support required by the interface.
+Clone the repository:
 
-Clone the repository, or download and extract its ZIP file. In the project folder, double-click:
+```bash
+git clone https://github.com/agilecoach-ashutosh/executive-coach-app.git
+cd executive-coach-app
+```
+
+Run:
 
 ```text
 Setup-Mac.command
 ```
 
-When setup finishes, start the application by double-clicking:
+The setup script creates a local virtual environment and installs the dependencies from `requirements.txt`.
+
+Start the application with:
 
 ```text
 Start-Mac.command
 ```
-
-If macOS blocks a command file downloaded from the internet, Control-click it, select **Open**, and confirm **Open**. On the first coaching session, allow microphone access when macOS requests it. The permission can later be changed under **System Settings → Privacy & Security → Microphone**.
 
 ## First-time configuration
 
