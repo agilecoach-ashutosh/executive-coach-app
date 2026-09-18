@@ -8,10 +8,8 @@ from __future__ import annotations
 
 import collections
 import io
-import os
 import queue
 import re
-import tempfile
 import threading
 import time
 import wave
@@ -22,7 +20,6 @@ from groq import Groq
 
 from coaching import TurnGate
 from session_export import SessionAudioRecorder
-
 
 DEFAULT_CHAT_MODEL = "openai/gpt-oss-120b"
 DEFAULT_STT_MODEL = "whisper-large-v3-turbo"
@@ -301,23 +298,13 @@ class GroqEngine(threading.Thread):
 
     def _transcribe(self, pcm: bytes) -> str:
         wav_bytes = pcm_to_wav_bytes(pcm)
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            tmp.write(wav_bytes)
-            path = tmp.name
-        try:
-            with open(path, "rb") as audio_file:
-                result = self.client.audio.transcriptions.create(
-                    file=audio_file,
-                    model=self.stt_model,
-                    response_format="json",
-                    temperature=0.0,
-                )
-            return (getattr(result, "text", "") or "").strip()
-        finally:
-            try:
-                os.remove(path)
-            except OSError:
-                pass
+        result = self.client.audio.transcriptions.create(
+            file=("presence-turn.wav", wav_bytes, "audio/wav"),
+            model=self.stt_model,
+            response_format="json",
+            temperature=0.0,
+        )
+        return (getattr(result, "text", "") or "").strip()
 
     def _generate_and_speak(self, user_text: str, keep_user: bool = True):
         self.emit("status", self.response_status)
@@ -370,25 +357,16 @@ class GroqEngine(threading.Thread):
         if not text:
             return
         self.emit("status", "Speaking")
-        with tempfile.NamedTemporaryFile(suffix=".wav", delete=False) as tmp:
-            path = tmp.name
-        try:
-            response = self.client.audio.speech.create(
-                model=self.tts_model,
-                voice=self.voice,
-                input=text,
-                response_format="wav",
-            )
-            response.write_to_file(path)
-            self._play_wav(path)
-        finally:
-            try:
-                os.remove(path)
-            except OSError:
-                pass
+        response = self.client.audio.speech.create(
+            model=self.tts_model,
+            voice=self.voice,
+            input=text,
+            response_format="wav",
+        )
+        self._play_wav_bytes(response.read())
 
-    def _play_wav(self, path: str):
-        with wave.open(path, "rb") as wav:
+    def _play_wav_bytes(self, wav_bytes: bytes):
+        with wave.open(io.BytesIO(wav_bytes), "rb") as wav:
             channels = wav.getnchannels()
             sample_width = wav.getsampwidth()
             sample_rate = wav.getframerate()

@@ -1,11 +1,28 @@
 import io
+import queue
+import sys
+import types
 import unittest
 import wave
+from unittest.mock import Mock
 
-from groq_engine import pcm_to_wav_bytes, split_for_tts
+# Keep helper tests independent of local PortAudio installation.
+_fake_sounddevice = types.ModuleType("sounddevice")
+_previous_sounddevice = sys.modules.get("sounddevice")
+sys.modules["sounddevice"] = _fake_sounddevice
+try:
+    from groq_engine import GroqEngine, pcm_to_wav_bytes, split_for_tts
+finally:
+    if _previous_sounddevice is None:
+        sys.modules.pop("sounddevice", None)
+    else:
+        sys.modules["sounddevice"] = _previous_sounddevice
 
 
 class GroqEngineHelperTests(unittest.TestCase):
+    def make_engine(self):
+        return GroqEngine("test-secret", "test-model", "troy", None, None, queue.Queue())
+
     def test_split_for_tts_respects_orpheus_limit(self):
         text = (
             "This is a realistic coaching response that should be split into safe chunks. "
@@ -31,6 +48,45 @@ class GroqEngineHelperTests(unittest.TestCase):
             self.assertEqual(wav.getsampwidth(), 2)
             self.assertEqual(wav.getframerate(), 16000)
             self.assertEqual(wav.getnframes(), 1600)
+
+    def test_transcription_upload_stays_in_memory(self):
+        engine = self.make_engine()
+        create = Mock(return_value=types.SimpleNamespace(text="  hello  "))
+        engine.client = types.SimpleNamespace(
+            audio=types.SimpleNamespace(
+                transcriptions=types.SimpleNamespace(create=create),
+            )
+        )
+
+        result = engine._transcribe(b"\x00\x00" * 1600)
+
+        self.assertEqual(result, "hello")
+        upload = create.call_args.kwargs["file"]
+        self.assertEqual(upload[0], "presence-turn.wav")
+        self.assertIsInstance(upload[1], bytes)
+        self.assertTrue(upload[1].startswith(b"RIFF"))
+        self.assertEqual(upload[2], "audio/wav")
+
+    def test_tts_playback_stays_in_memory(self):
+        engine = self.make_engine()
+        response = types.SimpleNamespace(read=Mock(return_value=b"RIFF-in-memory"))
+        create = Mock(return_value=response)
+        engine.client = types.SimpleNamespace(
+            audio=types.SimpleNamespace(
+                speech=types.SimpleNamespace(create=create),
+            )
+        )
+        engine._play_wav_bytes = Mock()
+
+        engine._speak_chunk("What matters here?")
+
+        engine._play_wav_bytes.assert_called_once_with(b"RIFF-in-memory")
+        create.assert_called_once_with(
+            model=engine.tts_model,
+            voice=engine.voice,
+            input="What matters here?",
+            response_format="wav",
+        )
 
 
 if __name__ == "__main__":

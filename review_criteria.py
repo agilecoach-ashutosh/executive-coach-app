@@ -39,7 +39,7 @@ If either is NOT OBSERVED, cite the transcript evidence and explain the concern.
 Competency 2 — Embodies a Coaching Mindset
 Do not rate this competency from one observed session. It develops across the coach's professional journey and cannot be fully captured in a single transcript.
 
-Competencies 3–8 — ACC observed coaching behaviors
+Competency 3 through Competency 8 — ACC observed coaching behaviors
 Rate every statement using exactly one of:
 EXCEEDS THE STANDARD / MEETS THE STANDARD / BELOW THE STANDARD / DOES NOT MEET STANDARD / N/A
 
