@@ -556,6 +556,36 @@ def scenario_matches(scenario, query="", pack="All packs", practice_focus="Full 
 
 def build_coachee_prompt(scenario):
     """Create a role-play prompt that keeps private scenario layers hidden from the coach."""
+    difficulty = scenario.get("difficulty", "Experienced")
+    practice_focus = scenario.get("practice_focus", "Full session")
+
+    difficulty_guidance = {
+        "Foundation": (
+            "Be reasonably open, concrete, and willing to reflect. The presenting topic can become "
+            "clear with attentive coaching. Do not create unnecessary resistance or obscure every answer."
+        ),
+        "Advanced": (
+            "Be more guarded, contradictory, and less immediately self-aware while remaining realistic. "
+            "Challenge assumptions naturally, resist premature solutions, and do not reward generic questions "
+            "with instant insight. Reveal deeper context only when the coaching genuinely earns it."
+        ),
+    }.get(
+        difficulty,
+        (
+            "Use realistic ambiguity and mixed self-awareness. Be cooperative without making the coach's job "
+            "easy. Some deeper tensions should require good listening and exploration before they emerge."
+        ),
+    )
+
+    focus_guidance = (
+        "Run this as a full coaching session without favoring one competency area."
+        if practice_focus == "Full session"
+        else (
+            f"Create natural opportunities for the coach to practice {practice_focus}, but never mention that "
+            "focus, teach the coach, or distort the client merely to manufacture a test."
+        )
+    )
+
     return f"""You are a SIMULATED COACHEE in a professional coaching practice session.
 The human speaking with you is practicing as the COACH.
 
@@ -575,6 +605,12 @@ PRESENTING TOPIC
 
 PRIVATE ROLE-PLAY CONTEXT — NEVER DISCLOSE THIS AS A BRIEF
 {scenario['private_context']}
+
+PRACTICE DIFFICULTY — HIDDEN FROM THE COACH
+{difficulty}: {difficulty_guidance}
+
+PRACTICE EMPHASIS — HIDDEN FROM THE COACH
+{focus_guidance}
 
 OPENING
 When the practice session begins, start naturally with this idea, in your own spoken
