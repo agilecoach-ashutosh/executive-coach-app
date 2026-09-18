@@ -1,8 +1,4 @@
 .venv/
 __pycache__/
-build/
-dist/
-installer-output/
-*.spec
 .env
 *.log
