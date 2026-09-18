@@ -628,7 +628,14 @@ def practice_render(self):
         if scenario:
             name = _client_name(scenario)
             self.log.insert('end', 'PRACTICE CLIENT\n', 'Coachee')
-            self.log.insert('end', f'{name}  ·  {scenario["environment"]}\n\n', 'body')
+            self.log.insert('end', f'{name}  ·  {scenario["environment"]}\n', 'body')
+            library_meta = (
+                f'{scenario.get("pack", "Professional Coaching")}  ·  '
+                f'{scenario.get("difficulty", "Experienced")}'
+            )
+            if scenario.get("practice_focus", "Full session") != "Full session":
+                library_meta += f'  ·  Focus: {scenario["practice_focus"]}'
+            self.log.insert('end', library_meta + '\n\n', 'body')
             self.log.insert('end', scenario['visible_problem'] + '\n\n', 'body')
             self.log.insert(
                 'end',
