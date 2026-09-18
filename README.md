@@ -10,6 +10,27 @@ It provides two experiences:
 > [!IMPORTANT]
 > Presence Coach is an educational and practice tool. It is not a therapist, an ICF-credentialed coach, an official ICF assessment platform, or a substitute for professional mental-health support.
 
+## Why Presence Coach?
+
+**You can talk to any AI. Presence helps you practice coaching.**
+
+General AI voice assistants can already hold useful coaching-style conversations, especially with a carefully written prompt. Presence Coach is designed for a narrower job: **deliberate practice of professional coaching**. It combines realistic practice conversations, coaching-specific roles, evidence from the transcript, developmental ACC/PCC/MCC lenses, session metrics, and review exports in one repeatable workflow.
+
+| General AI voice chat | Presence Coach |
+| --- | --- |
+| General-purpose conversation | Purpose-built coaching practice environment |
+| Coaching or coachee role usually needs to be explained in the prompt | Built-in **I am a Coachee** and **I am a Coach** modes |
+| Practice scenario and persona usually need to be created manually | Ready-to-use workplace scenarios with hidden coachee context |
+| AI may reveal too much of the simulated persona unless carefully instructed | Simulated coachee is designed to reveal context gradually through the conversation |
+| Coaching framework must usually be requested or supplied | Built-in developmental **ACC, PCC, and MCC** practice lenses |
+| Detailed behavior-by-behavior review requires additional prompting | ACC review evaluates **A3.1–A8.3** behavior by behavior using the configured developmental framework |
+| Evidence and timestamps must usually be requested separately | Review observations are tied back to exact transcript timestamps where evidence exists |
+| Session metrics are not normally part of the conversation workflow | Coach/Coachee word share, turns, questions, stacked questions, turn length, and interruption notes |
+| Transcript review and document creation require extra steps | Annotated transcript and developmental Word review are generated from the same session |
+| Useful for a one-off conversation | Designed for repeat practice, reflection, and discussion with a mentor coach |
+
+Presence does not depend on having a uniquely capable language model. Its value is the **practice system around the model**: practice a conversation, inspect the evidence, identify development areas, and practise again.
+
 ## Key capabilities
 
 - Live voice conversations using Google Gemini or Groq
