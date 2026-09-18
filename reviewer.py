@@ -120,7 +120,10 @@ def transcript_for_review(rows: Iterable[tuple[str, str, str]]) -> str:
 
 
 def _review_json_contract(level: str) -> str:
-    acc_rule = ""
+    acc_rule = """
+For PCC/MCC behavior items, use one of these current developmental statuses:
+OBSERVED, PARTIAL EVIDENCE, NOT OBSERVED, NO OPPORTUNITY, NOT ASSESSABLE.
+"""
     if level == "ACC":
         acc_rule = """
 ACC REQUIREMENT:
@@ -381,6 +384,17 @@ def render_structured_review(data: dict, level: str, source_name: str) -> str:
         lines.extend(_bullet_reference(item) for item in strengths if isinstance(item, dict))
     else:
         lines.append("- No specific strength statement was returned.")
+
+    lines.extend(["", "AREAS FOR DEVELOPMENT"])
+    development_areas = data.get("development_areas", [])
+    if development_areas:
+        lines.extend(
+            _bullet_reference(item)
+            for item in development_areas
+            if isinstance(item, dict)
+        )
+    else:
+        lines.append("- No separate development-area statement was returned.")
 
     lines.extend(["", "MARKER / BEHAVIORAL EVIDENCE"])
     for item in data.get("behaviors", []):
