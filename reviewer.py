@@ -137,6 +137,7 @@ Development note: include a concise developmental suggestion for BELOW THE STAND
 
 ACC-specific rules:
 - Use only the five ratings above for A3.1-A8.3.
+- Do not use NOT ASSESSABLE, LIMITED EVIDENCE, PARTIAL EVIDENCE, OBSERVED, or NOT OBSERVED as A3.1-A8.3 ratings. If there was no reasonable opportunity or the transcript cannot support a reliable judgment, use N/A and explain why in Evidence.
 - Competency 1 is handled as two qualifiers in the COMPETENCY SYNTHESIS: Q1 Ethics = OBSERVED / NOT OBSERVED; Q2 Coaching role = OBSERVED / NOT OBSERVED.
 - Competency 2 is NOT RATED from this single session. State that explicitly in the COMPETENCY SYNTHESIS.
 - Do not collapse several ACC behaviors into one generic competency observation; rate each behavior separately.
