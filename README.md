@@ -1,6 +1,6 @@
 # Presence Coach
 
-Presence Coach is a Windows desktop application for practising professional coaching conversations with voice-enabled AI.
+Presence Coach is a Windows and macOS desktop application for practising professional coaching conversations with voice-enabled AI.
 
 It provides two experiences:
 
@@ -19,7 +19,7 @@ It provides two experiences:
 - Developmental review through ACC, PCC, or MCC practice lenses
 - Session transcript export to Microsoft Word
 - Optional session-audio export to MP3
-- Secure API-key storage through Windows Credential Manager
+- Secure API-key storage through the operating system credential store
 
 ## How the two modes work
 
@@ -84,7 +84,7 @@ Provider-controlled models, quotas, availability, pricing, and supported languag
 
 ### Requirements
 
-- Windows 10 or Windows 11, 64-bit
+- Windows 10 or Windows 11, 64-bit; or a supported Intel/Apple Silicon Mac
 - Python 3.12
 - Git
 - A microphone and speakers or headphones
@@ -92,7 +92,7 @@ Provider-controlled models, quotas, availability, pricing, and supported languag
 
 Headphones are recommended to reduce microphone and speaker feedback.
 
-### Setup
+### Windows setup
 
 Clone the repository:
 
@@ -115,13 +115,31 @@ Start the application with:
 Start.cmd
 ```
 
+### macOS setup
+
+Install Python 3.12 from [python.org](https://www.python.org/downloads/macos/). The official installer includes the Tk support required by the interface.
+
+Clone the repository, or download and extract its ZIP file. In the project folder, double-click:
+
+```text
+Setup-Mac.command
+```
+
+When setup finishes, start the application by double-clicking:
+
+```text
+Start-Mac.command
+```
+
+If macOS blocks a command file downloaded from the internet, Control-click it, select **Open**, and confirm **Open**. On the first coaching session, allow microphone access when macOS requests it. The permission can later be changed under **System Settings → Privacy & Security → Microphone**.
+
 ## First-time configuration
 
 1. Open **Settings**.
 2. Select **Google Gemini** or **Groq** as the AI provider.
 3. Paste the API key for that provider.
 4. Select the microphone and speaker or headphones.
-5. Optionally enable secure key storage in Windows Credential Manager.
+5. Optionally enable secure key storage in Windows Credential Manager or macOS Keychain.
 6. Close Settings.
 7. Choose **I am a Coachee** or **I am a Coach**.
 8. Review and select the provider-consent checkbox.
@@ -189,7 +207,7 @@ Speaking share is estimated from transcript word counts; it is not measured audi
 - The Groq speech pipeline uploads and plays WAV data from memory; it does not create temporary session-audio files.
 - Presence does not automatically save the session recording to disk.
 - Exported Word and MP3 files are not encrypted by Presence and should be stored appropriately.
-- Saved API keys use Windows Credential Manager through the operating-system keyring.
+- Saved API keys use Windows Credential Manager or macOS Keychain through the operating-system keyring.
 
 Review the policies and data-handling terms of the selected AI provider before using real or sensitive coaching information.
 

@@ -468,7 +468,7 @@ class App(tk.Tk):
 
         tk.Checkbutton(
             connection,
-            text='Remember key securely in Windows Credential Manager',
+            text='Remember key securely in this device’s credential store',
             variable=self.remember,
             bg=PANEL,
             fg=MUTED,
@@ -743,7 +743,7 @@ class App(tk.Tk):
         except Exception:
             messagebox.showerror(
                 'Key storage',
-                'Could not delete the saved key. Check Windows Credential Manager.',
+                'Could not delete the saved key. Check this device’s credential store.',
             )
             return
         self.key.set('')

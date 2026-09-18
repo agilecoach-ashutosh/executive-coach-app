@@ -146,7 +146,7 @@ def _inject_provider_settings(self):
 
     tk.Checkbutton(
         groq_card,
-        text="Remember Groq key securely in Windows Credential Manager",
+        text="Remember Groq key securely in this device’s credential store",
         variable=self.remember,
         bg=base.PANEL,
         fg=base.MUTED,
@@ -257,7 +257,7 @@ def provider_forget_key(self):
         except Exception:
             messagebox.showerror(
                 "Key storage",
-                "Could not delete the saved Groq key. Check Windows Credential Manager.",
+                "Could not delete the saved Groq key. Check this device’s credential store.",
             )
             return
         self.groq_key.set("")
