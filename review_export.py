@@ -68,6 +68,8 @@ def _strip_markdown(value: str, *, strip_bullet: bool = False) -> str:
     line = line.replace("***", "").strip()
     line = re.sub(r"^\*+(?=\S)", "", line)
     line = re.sub(r"\*+$", "", line).strip()
+    # Remove any remaining single-asterisk emphasis, e.g. *Evidence:*.
+    line = line.replace("*", "")
 
     if strip_bullet:
         line = re.sub(r"^[-+•]\s*", "", line).strip()
