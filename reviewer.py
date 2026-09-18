@@ -258,9 +258,10 @@ TRANSCRIPT
 
 def _extract_json_text(raw_text: str) -> str:
     text = (raw_text or "").strip()
-    if text.startswith("\`\`\`"):
-        text = re.sub(r"^\`\`\`(?:json)?\s*", "", text, flags=re.IGNORECASE)
-        text = re.sub(r"\s*\`\`\`$", "", text)
+    fence = chr(96) * 3
+    if text.startswith(fence):
+        text = re.sub(r"^" + re.escape(fence) + r"(?:json)?\s*", "", text, flags=re.IGNORECASE)
+        text = re.sub(r"\s*" + re.escape(fence) + r"$", "", text)
     start = text.find("{")
     end = text.rfind("}")
     if start == -1 or end == -1 or end <= start:
