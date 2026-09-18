@@ -179,6 +179,7 @@ def export_coaching_review_word(self):
             level,
             metrics,
             getattr(self, "current_scenario", None),
+            list(self.transcript.rows),
         )
     except Exception as exc:
         messagebox.showerror("Review export failed", str(exc), parent=parent)
@@ -186,7 +187,7 @@ def export_coaching_review_word(self):
 
     messagebox.showinfo(
         "Review exported",
-        "The developmental review was saved as a structured Word report with session metrics and ICF behavior-evidence tables.",
+        "The developmental review was saved as a Word report with an annotated transcript, session metrics, and ICF developmental synthesis.",
         parent=parent,
     )
     return True
