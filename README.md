@@ -36,7 +36,7 @@ Presence does not depend on having a uniquely capable language model. Its value 
 - Live voice conversations using Google Gemini or Groq
 - English and multilingual speech support, depending on the selected provider
 - Coachee mode with non-directive, client-centred coaching behaviour
-- Coach-practice mode with realistic workplace scenarios
+- Coach-practice mode with a searchable Scenario Library, scenario packs, difficulty levels, practice-focus filters, and Surprise Me
 - Developmental review through ACC, PCC, or MCC practice lenses
 - Session transcript export to Microsoft Word
 - Optional session-audio export to MP3
