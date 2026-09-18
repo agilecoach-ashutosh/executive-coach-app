@@ -12,7 +12,7 @@ trained ICF assessor / mentor coach.
 from __future__ import annotations
 
 
-ACC_SOURCE = "ICF ACC Minimum Skills Requirements, rev. September 16, 2025 (effective January 1, 2026)"
+ACC_SOURCE = "ICF ACC Minimum Skills Requirements + 2026 ICF ACC Mentor Coaching Session Observation Form"
 PCC_SOURCE = "ICF PCC Minimum Skills Requirements, rev. September 16, 2025"
 MCC_SOURCE = "ICF MCC Minimum Skills Requirements, rev. September 16, 2025 (effective January 1, 2026)"
 
