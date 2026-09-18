@@ -1,18 +1,17 @@
 """Presence Coach desktop application. Run with Python 3.12+."""
 import math
-import time
-import webbrowser
 import queue
+import time
 import tkinter as tk
-from tkinter import ttk, messagebox, filedialog
+import webbrowser
 from pathlib import Path
+from tkinter import filedialog, messagebox, ttk
 
 import keyring
 import sounddevice as sd
 
 from coaching import Transcript
 from engine import LiveEngine
-
 
 BG = '#050810'
 PANEL = '#0a111c'
@@ -25,6 +24,12 @@ CYAN = '#66d9ef'
 INK = '#eef5ff'
 MUTED = '#7f92aa'
 DANGER = '#ff7d7d'
+
+PARTICLE_COUNT = 180
+FILAMENT_COUNT = 8
+FILAMENT_STEPS = 40
+ANIMATION_DELAY_MS = 50
+REDUCED_MOTION_DELAY_MS = 100
 
 
 API_HELP = """GET YOUR GEMINI API KEY
@@ -65,7 +70,7 @@ class App(tk.Tk):
         except Exception:
             pass
 
-        self.model = tk.StringVar(value='gemini-3.1-flash-live-preview')
+        self.model = tk.StringVar(value='gemini-3.8-live')
         self.voice = tk.StringVar(value='Kore')
         self.pause = tk.StringVar(value='6')
         self.threshold = tk.StringVar(value='0.018')
@@ -83,7 +88,7 @@ class App(tk.Tk):
         self.bind('<Escape>', self.on_escape)
         self.protocol('WM_DELETE_WINDOW', self.close)
         self.after(40, self.poll)
-        self.after(40, self.animate)
+        self.after(ANIMATION_DELAY_MS, self.animate)
 
     def configure_ttk(self):
         style = ttk.Style(self)
@@ -838,8 +843,8 @@ class App(tk.Tk):
         ]
 
         self.particles = []
-        for i in range(650):
-            y = 1 - 2 * (i + .5) / 650
+        for i in range(PARTICLE_COUNT):
+            y = 1 - 2 * (i + .5) / PARTICLE_COUNT
             angle = i * math.pi * (3 - math.sqrt(5))
             ring = math.sqrt(1 - y * y)
             point = (ring * math.cos(angle), y, ring * math.sin(angle))
@@ -848,7 +853,7 @@ class App(tk.Tk):
 
         self.filaments = [
             self.orb.create_line(0, 0, 1, 1, fill='#744622', width=1)
-            for _ in range(12)
+            for _ in range(FILAMENT_COUNT)
         ]
         self.core = [
             self.orb.create_oval(0, 0, 1, 1, outline=color, width=width)
@@ -926,8 +931,8 @@ class App(tk.Tk):
 
         for j, item in enumerate(self.filaments):
             points = []
-            for k in range(61):
-                a = k * math.tau / 60
+            for k in range(FILAMENT_STEPS + 1):
+                a = k * math.tau / FILAMENT_STEPS
                 rr = radius * (
                     1
                     + .035 * math.sin(a * 9 + t * 4 + j)
@@ -979,7 +984,8 @@ class App(tk.Tk):
         if self.display_hint.get() != hint:
             self.display_hint.set(hint)
 
-        self.after(40, self.animate)
+        delay = REDUCED_MOTION_DELAY_MS if gentle else ANIMATION_DELAY_MS
+        self.after(delay, self.animate)
 
     def save(self):
         if not self.transcript.rows:
