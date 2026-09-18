@@ -241,19 +241,34 @@ Start and finish a new voice session, then open Session Review. Typed messages d
 - Do not represent a simulated-coachee session as a genuine credential-submission recording.
 - Use qualified human support for mental-health crises, clinical care, safeguarding concerns, or other high-risk situations.
 
-## References
+## Content and coaching references
 
-Presence uses ICF material as a developmental reference, not as an endorsement or claim of assessment authority.
+Presence Coach is an original educational/practice application. The coaching behaviour, developmental-review logic, and observation-report design are informed by the following professional-coaching sources. These references do **not** imply ICF endorsement, accreditation, assessment authority, or that Presence can replace a qualified human coach, mentor coach, or ICF assessor.
 
-- [ICF Core Competencies](https://coachingfederation.org/resource/icf-core-competencies/)
-- [ACC Minimum Skills Requirements](https://coachingfederation.org/resource/acc-minimum-skills-requirements/)
-- [PCC Minimum Skills Requirements](https://coachingfederation.org/resource/pcc-minimum-skills-requirements/)
-- [MCC Minimum Skills Requirements](https://coachingfederation.org/resource/mcc-minimum-skills-requirements/)
-- [Gemini Live API](https://ai.google.dev/gemini-api/docs/live-api)
-- [Gemini Live supported languages](https://ai.google.dev/gemini-api/docs/live-api/capabilities#supported-languages)
-- [Groq Quickstart](https://console.groq.com/docs/quickstart)
-- [Groq Speech to Text](https://console.groq.com/docs/speech-to-text)
-- [Groq Text to Speech](https://console.groq.com/docs/text-to-speech)
+### ICF professional coaching foundations
+
+- [2025 ICF Core Competencies](https://coachingfederation.org/resource/icf-core-competencies/) — foundation for ethical practice, agreements, trust and safety, presence, active listening, evoking awareness, and client growth.
+- [2025 ICF Code of Ethics](https://coachingfederation.org/credentialing/coaching-ethics/icf-code-of-ethics/) — reference for ethical boundaries, professional role clarity, confidentiality, integrity, and responsible coaching practice.
+- [ICF Mentor Coaches resource hub](https://coachingfederation.org/audience-type/mentor-coaches/) — official ICF collection of mentor-coaching observation and competency-review resources.
+
+### Credential-level developmental review references
+
+- [ACC Minimum Skills Requirements](https://coachingfederation.org/resource/acc-minimum-skills-requirements/) — developmental ACC evidence lens used by the review system.
+- [PCC Minimum Skills Requirements](https://coachingfederation.org/resource/pcc-minimum-skills-requirements/) — developmental PCC evidence lens used by the review system.
+- [MCC Minimum Skills Requirements](https://coachingfederation.org/resource/mcc-minimum-skills-requirements/) — developmental MCC mastery lens used by the review system.
+- [ACC Session Observation Form](https://coachingfederation.org/resource/acc-session-observation-form/) — informs the ACC Word-review observation structure, evidence-by-timestamp approach, Competency 1 qualifiers, Competency 2 limitation, and the Competencies 3–8 rating scale.
+- [PCC Session Observation Form](https://coachingfederation.org/resource/pcc-session-observation-form/) — official reference for PCC mentor-coaching session observation and evidence documentation.
+- [MCC Session Observation Form](https://coachingfederation.org/resource/mcc-session-observation-form/) — official reference for MCC mentor-coaching session observation and evidence documentation.
+
+### Owner-authored coaching content
+
+- [Agile Orbit — Professional Coaching](https://agilecoach-ashutosh.github.io/agile-orbit/coaching/professional-coaching.html) — owner-authored professional-coaching material used as a content reference for Presence coaching behaviour, client ownership, session agreements, listening, questions, coaching mindset, ethics, reflection tools, and closure.
+- [Agile Orbit source repository](https://github.com/agilecoach-ashutosh/agile-orbit) — versioned source for the owner-authored coaching content referenced during Presence design.
+- [Presence: Agile Orbit integration notes](reference/AGILE-ORBIT-INTEGRATION.md) — documents which Agile Orbit ideas were adapted into Presence and the deliberate product boundaries applied.
+- [Presence: ICF practice-design notes](reference/ICF-PRACTICE-DESIGN.md) — documents how ICF sources informed the coaching-practice design without claiming credential equivalence.
+- [Presence: Agile Orbit source manifest](reference/agile-orbit-source-manifest.json) — records the source snapshot used when the Agile Orbit coaching material was reviewed for Presence.
+
+Technical provider/API documentation is kept in the relevant setup and provider sections of this README rather than in this content-reference library.
 
 ## Status
 
