@@ -153,7 +153,9 @@ HOW TO APPLY THE FRAMEWORK
 - Review the whole coaching conversation first, then examine individual behavioral statements.
 - Do not treat absence of a behavior as failure when there was no reasonable opportunity to demonstrate it.
 - Distinguish NOT OBSERVED from NO OPPORTUNITY and NOT ASSESSABLE.
-- Use the client's actual words and timestamps whenever evidence is available.
+- Use the client's actual words and exact transcript timestamps whenever evidence is available.
+- Copy timestamps exactly in HH:MM:SS form from the transcript so the Word export can attach each observation to the matching transcript row.
+- Every behavior marked OBSERVED, PARTIAL EVIDENCE, CONSISTENT, INCONSISTENT, EXCEEDS THE STANDARD, MEETS THE STANDARD, BELOW THE STANDARD, or DOES NOT MEET STANDARD must cite at least one exact transcript timestamp when transcript evidence exists.
 - Consider patterns across the session, not isolated coach sentences only.
 - Do not reward performative depth, excessive questioning, forced action, or generic empathy.
 - Do not infer that a behavior was demonstrated merely because the coach asked a question about it.
@@ -187,8 +189,13 @@ MARKER / BEHAVIORAL EVIDENCE
 Review every current MSR behavioral statement in the selected framework that can reasonably
 be evaluated from this session. For each item use this compact format:
 [Competency + short behavior name] — OBSERVED / PARTIAL EVIDENCE / NOT OBSERVED / NO OPPORTUNITY / NOT ASSESSABLE
-Evidence: timestamp(s) and a concise explanation.
+Evidence: exact timestamp(s) copied from the transcript in [HH:MM:SS] form, followed by a concise explanation.
 Development note: only when useful.
+
+For ACC, when the supplied framework supports the ICF mentor-observation performance scale,
+prefer these behavior ratings where applicable: EXCEEDS THE STANDARD / MEETS THE STANDARD /
+BELOW THE STANDARD / DOES NOT MEET STANDARD / N/A. Continue to use NOT ASSESSABLE or
+NO OPPORTUNITY when the transcript genuinely cannot support a performance judgment.
 
 Use the current MSR behavior descriptions supplied above. Do not invent or reintroduce
 legacy ACC/PCC marker numbers unless an identifier is explicitly present in the current framework.
