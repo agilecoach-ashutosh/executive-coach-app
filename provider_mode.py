@@ -6,6 +6,7 @@ voice pipeline: Whisper STT -> Groq-hosted chat model -> Orpheus TTS.
 from __future__ import annotations
 
 import threading
+import time
 import tkinter as tk
 from tkinter import messagebox, ttk
 import webbrowser
@@ -21,7 +22,11 @@ from groq_engine import (
     DEFAULT_VOICE,
     GroqEngine,
 )
-from reviewer import build_review_prompt
+from reviewer import (
+    FAST_GROQ_REVIEW_MODEL,
+    build_review_prompt,
+    structured_model_output_to_text,
+)
 from scenarios import build_coachee_prompt, scenario_kickoff
 
 
@@ -483,40 +488,56 @@ def provider_generate_review(self):
     metrics = review._current_metrics(self)
     rows = list(self.transcript.rows)
     scenario = self.current_scenario
-    model = self.groq_model.get()
+    conversation_model = self.groq_model.get()
     prompt = build_review_prompt(level, rows, metrics, scenario)
 
-    self._review_generate_button.configure(state="disabled", text="Reviewing…")
+    self._review_started_at = time.monotonic()
+    self._review_last_elapsed = -1
+    self._review_generate_button.configure(state="disabled", text="Reviewing… 0s")
     review._set_review_output(
         self,
         f"Reviewing this transcript against the {level} developmental lens using Groq…\n\n"
-        "The live coachee session is already closed; the reviewer is a separate model call.",
+        "Presence is requesting compact structured findings and will assemble the readable report locally. "
+        f"The review uses {FAST_GROQ_REVIEW_MODEL} first for faster analysis, independent of the live conversation model.",
     )
 
     def worker():
-        try:
-            client = Groq(api_key=key)
-            response = client.chat.completions.create(
-                model=model,
-                messages=[
-                    {
-                        "role": "system",
-                        "content": (
-                            "You are a rigorous developmental reviewer of professional coaching practice. "
-                            "Follow the requested evidence boundaries exactly."
-                        ),
-                    },
-                    {"role": "user", "content": prompt},
-                ],
-                temperature=.2,
-                max_completion_tokens=5000,
-            )
-            text = (response.choices[0].message.content or "").strip()
-            if not text:
-                raise RuntimeError("Groq returned an empty review.")
-            self._review_queue.put(("ok", text))
-        except Exception as exc:
-            self._review_queue.put(("error", str(exc)))
+        client = Groq(api_key=key)
+        errors = []
+        models = [FAST_GROQ_REVIEW_MODEL]
+        if conversation_model not in models:
+            models.append(conversation_model)
+
+        for model in models:
+            try:
+                response = client.chat.completions.create(
+                    model=model,
+                    messages=[
+                        {
+                            "role": "system",
+                            "content": (
+                                "You are a rigorous developmental reviewer of professional coaching practice. "
+                                "Return only the JSON object requested by the user prompt."
+                            ),
+                        },
+                        {"role": "user", "content": prompt},
+                    ],
+                    temperature=.1,
+                    max_completion_tokens=3800,
+                )
+                raw = (response.choices[0].message.content or "").strip()
+                if not raw:
+                    raise RuntimeError("returned no text")
+                text = structured_model_output_to_text(raw, level)
+                self._review_queue.put(("ok", text))
+                return
+            except Exception as exc:
+                errors.append(f"{model}: {exc}")
+
+        self._review_queue.put((
+            "error",
+            "Groq coaching review could not be generated.\n\n" + "\n\n".join(errors[-2:]),
+        ))
 
     threading.Thread(target=worker, daemon=True).start()
     self.after(120, self._poll_review_result)
