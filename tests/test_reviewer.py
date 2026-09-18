@@ -1,7 +1,81 @@
+import json
 import unittest
 
-from reviewer import build_review_prompt, calculate_metrics, format_duration, transcript_for_review
+from reviewer import (
+    ACC_BEHAVIOR_IDS,
+    FAST_GROQ_REVIEW_MODEL,
+    build_review_prompt,
+    calculate_metrics,
+    format_duration,
+    parse_structured_review,
+    render_structured_review,
+    transcript_for_review,
+)
 from review_criteria import get_review_criteria
+
+
+def _acc_payload():
+    return {
+        "level": "ACC",
+        "assessment_basis": "ACC developmental practice",
+        "competency_1": {
+            "ethics": "OBSERVED",
+            "coaching_role": "OBSERVED",
+            "evidence": "The coach stayed in the coaching role.",
+        },
+        "competency_2": {
+            "status": "NOT_RATED_SINGLE_SESSION",
+            "note": "Requires broader evidence.",
+        },
+        "behaviors": [
+            {
+                "reference": reference,
+                "name": f"Behavior {reference}",
+                "rating": "MEETS THE STANDARD",
+                "timestamps": ["00:00:15"],
+                "evidence": "Concise transcript evidence.",
+                "development": "",
+            }
+            for reference in ACC_BEHAVIOR_IDS
+        ],
+        "competency_synthesis": [
+            {
+                "competency": "Competency 3 - Establishes and Maintains Agreements",
+                "strength": "Developing",
+                "evidence": "The topic was explored.",
+                "development": "Clarify the session outcome.",
+            }
+        ],
+        "strengths": [
+            {
+                "reference": "A7.3",
+                "timestamps": ["00:00:15"],
+                "text": "The coach used a clear open question.",
+            }
+        ],
+        "development_areas": [
+            {
+                "reference": "A3.2",
+                "timestamps": [],
+                "text": "Make the session outcome explicit.",
+            }
+        ],
+        "patterns": ["Questions were generally concise."],
+        "practice_edges": [
+            {"reference": "A3.2", "text": "Agree the session outcome explicitly."},
+            {"reference": "A5.4", "text": "Allow more reflective space."},
+            {"reference": "A8.1", "text": "Explore learning before action."},
+        ],
+        "moments": [
+            {
+                "timestamp": "00:00:15",
+                "reference": "A7.3",
+                "what_happened": "A clear open question was asked.",
+                "alternative": "Pause after the question.",
+            }
+        ],
+        "bottom_line": "The session shows a useful coaching foundation with clear development opportunities.",
+    }
 
 
 class ReviewerMetricsTests(unittest.TestCase):
@@ -57,7 +131,7 @@ class ReviewerMetricsTests(unittest.TestCase):
         self.assertNotIn("2022", acc_source)
         self.assertNotIn("2021", pcc_source)
 
-    def test_review_prompt_includes_selected_level_framework(self):
+    def test_review_prompt_requests_compact_structured_output(self):
         rows = [
             ("00:00:04", "Coach", "What would make this useful today?"),
             ("00:00:11", "Coachee", "I want clarity about delegation."),
@@ -68,8 +142,50 @@ class ReviewerMetricsTests(unittest.TestCase):
             source, _ = get_review_criteria(level)
             prompt = build_review_prompt(level, rows, metrics)
             self.assertIn(source, prompt)
-            self.assertIn("MARKER / BEHAVIORAL EVIDENCE", prompt)
-            self.assertIn("NOT ASSESSABLE", prompt)
+            self.assertIn("STRUCTURED OUTPUT CONTRACT", prompt)
+            self.assertIn('"behaviors"', prompt)
+            self.assertIn("Return ONE valid JSON object only", prompt)
+
+        acc_prompt = build_review_prompt("ACC", rows, metrics)
+        for reference in ACC_BEHAVIOR_IDS:
+            self.assertIn(reference, acc_prompt)
+
+    def test_acc_structured_review_requires_all_20_behaviors(self):
+        payload = _acc_payload()
+        parsed = parse_structured_review(json.dumps(payload), "ACC")
+
+        self.assertEqual(len(parsed["behaviors"]), 20)
+        self.assertEqual(
+            [item["reference"] for item in parsed["behaviors"]],
+            list(ACC_BEHAVIOR_IDS),
+        )
+
+    def test_acc_structured_review_rejects_missing_behavior(self):
+        payload = _acc_payload()
+        payload["behaviors"] = payload["behaviors"][:-1]
+
+        with self.assertRaises(ValueError):
+            parse_structured_review(json.dumps(payload), "ACC")
+
+    def test_local_renderer_preserves_readable_review_sections(self):
+        payload = _acc_payload()
+        text = render_structured_review(
+            payload,
+            "ACC",
+            "ICF ACC Minimum Skills Requirements + Session Observation Form",
+        )
+
+        self.assertIn("DEVELOPMENTAL REVIEW — ACC", text)
+        self.assertIn("WHAT THE COACH DID WELL", text)
+        self.assertIn("MARKER / BEHAVIORAL EVIDENCE", text)
+        self.assertIn("A3.1", text)
+        self.assertIn("MEETS THE STANDARD", text)
+        self.assertIn("COMPETENCY SYNTHESIS", text)
+        self.assertIn("THREE HIGH-LEVERAGE PRACTICE EDGES", text)
+        self.assertIn("BOTTOM LINE", text)
+
+    def test_groq_has_dedicated_fast_review_model(self):
+        self.assertEqual(FAST_GROQ_REVIEW_MODEL, "openai/gpt-oss-20b")
 
 
 if __name__ == "__main__":
