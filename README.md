@@ -229,7 +229,7 @@ Presence uses a local-first session model, but the selected cloud AI provider st
 
 - With **Gemini**, live audio/text and generated responses are processed by Google Gemini under the user's own API project.
 - With **Groq**, spoken turns are sent to Groq Whisper, conversation text is sent to the selected Groq chat model, and reply text is sent to Groq Orpheus for speech generation.
-- A post-session review sends the visible transcript and descriptive metrics only when the user explicitly requests the review and provider authorization is enabled.
+- A post-session review sends the visible transcript and descriptive metrics only when the user explicitly requests it; if session authorization has reset, Presence asks for a separate one-time confirmation.
 - Transcript content and captured session audio remain in application memory so the user can decide whether to export them.
 - Presence does not automatically save the session recording to disk.
 - **Privacy & data use** in the app explains the current data flow and includes **Discard current session data** to clear the in-memory transcript/audio after a session.
