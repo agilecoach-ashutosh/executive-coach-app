@@ -7,7 +7,7 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-import provider_mode as provider
+import privacy_mode as provider
 import practice_review as review
 from review_export import export_review_docx
 from session_export import export_transcript_docx, format_elapsed
