@@ -225,16 +225,25 @@ Speaking share is estimated from transcript word counts; it is not measured audi
 
 ## Privacy and data handling
 
-- With **Gemini**, live audio and text are processed by Google Gemini.
+Presence uses a local-first session model, but the selected cloud AI provider still processes the conversation.
+
+- With **Gemini**, live audio/text and generated responses are processed by Google Gemini under the user's own API project.
 - With **Groq**, spoken turns are sent to Groq Whisper, conversation text is sent to the selected Groq chat model, and reply text is sent to Groq Orpheus for speech generation.
-- A post-session review sends the visible transcript and descriptive metrics only when the user explicitly requests the review.
-- Transcript content and session audio remain in application memory during the active session so the user can decide whether to export them.
-- The Groq speech pipeline uploads and plays WAV data from memory; it does not create temporary session-audio files.
+- A post-session review sends the visible transcript and descriptive metrics only when the user explicitly requests the review and provider authorization is enabled.
+- Transcript content and captured session audio remain in application memory so the user can decide whether to export them.
 - Presence does not automatically save the session recording to disk.
+- **Privacy & data use** in the app explains the current data flow and includes **Discard current session data** to clear the in-memory transcript/audio after a session.
+- Provider authorization is session-scoped. It resets after a completed session and when the selected provider changes. Withdrawing it during a live session ends the connection.
 - Exported Word and MP3 files are not encrypted by Presence and should be stored appropriately.
 - Saved API keys use Windows Credential Manager or macOS Keychain through the operating-system keyring.
+- Presence is intended for adults aged **18 or older**.
 
-Review the policies and data-handling terms of the selected AI provider before using real or sensitive coaching information.
+For real-client or organizational use, the user remains responsible for an appropriate lawful basis, privacy notice, recording permission where required, confidentiality obligations, provider-plan selection, retention, and international-transfer requirements.
+
+See **[PRIVACY.md](PRIVACY.md)** for the full privacy and data-processing notice, including Gemini/Groq retention information, GDPR-oriented guidance, deletion boundaries, and individual-rights handling.
+
+> [!IMPORTANT]
+> The project is designed with privacy-by-design principles in mind, but it does not claim blanket or certified GDPR compliance. Compliance depends on deployment, provider plan/settings, the data entered, and the user's legal/organizational context.
 
 ## Project structure
 
@@ -245,7 +254,7 @@ Review the policies and data-handling terms of the selected AI provider before u
 | `launch.py` | Performance-optimized orb and dialog layer |
 | `practice_mode.py` | Role selection and simulated-coachee mode |
 | `practice_review.py` | Post-session metrics and review interface |
-| `provider_mode.py` | Gemini and Groq provider selection |
+| `provider_mode.py` | Gemini and Groq provider selection |\n| `privacy_mode.py` | Session-scoped provider authorization, privacy notice UI, and in-memory discard control |
 | `session_export.py` | Transcript and in-memory audio export helpers |
 | `session_export_mode.py` | Current application entry point and export interface |
 | `groq_engine.py` | Groq speech-to-text, LLM, and text-to-speech pipeline |
@@ -279,7 +288,7 @@ Start and finish a new voice session, then open Session Review. Typed messages d
 
 ## Responsible use
 
-- Obtain appropriate consent before recording or processing another person's voice or coaching conversation.
+- Use Presence only with adults aged 18 or older.\n- Obtain appropriate consent before recording or processing another person's voice or coaching conversation.
 - Do not submit confidential client information unless your privacy, contractual, and organizational requirements permit it.
 - Treat generated reviews as developmental prompts that require human judgment.
 - Do not represent a simulated-coachee session as a genuine credential-submission recording.
