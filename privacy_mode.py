@@ -89,7 +89,9 @@ def _consent_changed(self, *_):
         return
 
     engine = getattr(self, "engine", None)
-    if engine and engine.is_alive() and not getattr(engine, "stopping", None).is_set():
+    stopping = getattr(engine, "stopping", None) if engine else None
+    is_stopping = bool(stopping and stopping.is_set())
+    if engine and engine.is_alive() and not is_stopping:
         self.stop()
         messagebox.showinfo(
             "Provider permission withdrawn",
@@ -381,15 +383,17 @@ def open_privacy_notice(self):
 
 def privacy_generate_review(self):
     if not self.consent.get():
-        messagebox.showinfo(
-            "Provider permission required",
+        parent = getattr(self, "_review_dialog", None) or self
+        allowed = messagebox.askyesno(
+            "Send transcript for AI review?",
             (
-                "Generating a coaching review sends the visible transcript and session metrics to the selected "
-                "AI provider. Re-enable the provider authorization checkbox before requesting the review."
+                "Generating the coaching review sends the visible transcript and descriptive session metrics "
+                "to the selected AI provider.\n\nAllow this one review request?"
             ),
-            parent=getattr(self, "_review_dialog", None) or self,
+            parent=parent,
         )
-        return
+        if not allowed:
+            return
     return _original_generate_review(self)
 
 
