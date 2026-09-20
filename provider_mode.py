@@ -221,7 +221,7 @@ def _update_provider_ui(self):
     selected = self.provider.get() if hasattr(self, "provider") else GEMINI
     if selected == GROQ:
         self.provider_consent_text.set(
-            "Allow this session to use GroqCloud  •  API usage is subject to your Groq plan and limits"
+            "I’m 18+ and allow this session’s voice/text to be processed by GroqCloud"
         )
         if hasattr(self, "_gemini_connection_frame"):
             self._gemini_connection_frame.pack_forget()
@@ -237,7 +237,7 @@ def _update_provider_ui(self):
             )
     else:
         self.provider_consent_text.set(
-            "Allow this session to use Google Gemini  •  API usage may be billed"
+            "I’m 18+ and allow this session’s voice/text to be processed by Google Gemini"
         )
         if hasattr(self, "_groq_connection_frame"):
             self._groq_connection_frame.pack_forget()
