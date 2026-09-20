@@ -99,7 +99,7 @@ Provider authorization is session-scoped in the current application.
 - A new provider selection clears the checkbox.
 - Completion of a voice session clears the checkbox.
 - If the checkbox is withdrawn while a live session is running, Presence ends the live session so no further voice/text is intentionally sent by the application.
-- Generating an AI coaching review requires the provider authorization to be enabled because the visible transcript and metrics are sent to the selected provider.
+- If session authorization is no longer active, generating an AI coaching review asks for a separate explicit confirmation before the visible transcript and metrics are sent to the selected provider.
 
 ## 7. Storage, retention, and deletion
 
