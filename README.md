@@ -254,7 +254,8 @@ See **[PRIVACY.md](PRIVACY.md)** for the full privacy and data-processing notice
 | `launch.py` | Performance-optimized orb and dialog layer |
 | `practice_mode.py` | Role selection and simulated-coachee mode |
 | `practice_review.py` | Post-session metrics and review interface |
-| `provider_mode.py` | Gemini and Groq provider selection |\n| `privacy_mode.py` | Session-scoped provider authorization, privacy notice UI, and in-memory discard control |
+| `provider_mode.py` | Gemini and Groq provider selection |
+| `privacy_mode.py` | Session-scoped provider authorization, privacy notice UI, and in-memory discard control |
 | `session_export.py` | Transcript and in-memory audio export helpers |
 | `session_export_mode.py` | Current application entry point and export interface |
 | `groq_engine.py` | Groq speech-to-text, LLM, and text-to-speech pipeline |
@@ -288,7 +289,8 @@ Start and finish a new voice session, then open Session Review. Typed messages d
 
 ## Responsible use
 
-- Use Presence only with adults aged 18 or older.\n- Obtain appropriate consent before recording or processing another person's voice or coaching conversation.
+- Use Presence only with adults aged 18 or older.
+- Obtain appropriate consent before recording or processing another person's voice or coaching conversation.
 - Do not submit confidential client information unless your privacy, contractual, and organizational requirements permit it.
 - Treat generated reviews as developmental prompts that require human judgment.
 - Do not represent a simulated-coachee session as a genuine credential-submission recording.
