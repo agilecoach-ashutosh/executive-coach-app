@@ -325,6 +325,13 @@ Presence Coach is an original educational/practice application. The coaching beh
 
 Technical provider/API documentation is kept in the relevant setup and provider sections of this README rather than in this content-reference library.
 
+## Licence
+
+Presence Coach's original source code and owner-authored project documentation
+are available under the [MIT License](LICENSE). External services, dependencies,
+professional-coaching frameworks, publications, and trademarks remain subject
+to their respective owners' terms; see [Third-party notices](THIRD_PARTY_NOTICES.md).
+
 ## Status
 
 Presence Coach is an experimental learning and coaching-practice project. Features and provider integrations may change as the project evolves.
