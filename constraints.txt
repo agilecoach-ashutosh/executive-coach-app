@@ -1,0 +1,9 @@
+# Reproducible direct dependency set. Update deliberately and validate on all CI platforms.
+google-genai==1.75.0
+groq==0.37.1
+sounddevice==0.5.6
+numpy==2.5.3
+keyring==25.7.0
+python-docx==1.2.0
+lameenc==1.8.4
+pywin32==312; platform_system == "Windows"

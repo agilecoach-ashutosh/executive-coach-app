@@ -8,8 +8,8 @@ from __future__ import annotations
 import threading
 import time
 import tkinter as tk
-from tkinter import messagebox, ttk
 import webbrowser
+from tkinter import messagebox, ttk
 
 from groq import Groq
 
@@ -20,6 +20,7 @@ from groq_engine import (
     DEFAULT_STT_MODEL,
     DEFAULT_TTS_MODEL,
     DEFAULT_VOICE,
+    REQUEST_TIMEOUT_SECONDS,
     GroqEngine,
 )
 from reviewer import (
@@ -28,7 +29,6 @@ from reviewer import (
     structured_model_output_to_text,
 )
 from scenarios import build_coachee_prompt, scenario_kickoff
-
 
 base = review.base
 _original_init = base.App.__init__
@@ -421,6 +421,8 @@ def provider_start(self):
 
     self.transcript = base.Transcript()
     self.dirty = False
+    self.audio_exported = False
+    self._safety_alerted = False
     self.render()
     self.muted.set(False)
     self.hold.set(False)
@@ -490,6 +492,7 @@ def provider_generate_review(self):
     scenario = self.current_scenario
     conversation_model = self.groq_model.get()
     prompt = build_review_prompt(level, rows, metrics, scenario)
+    generation = review._begin_review_generation(self)
 
     self._review_started_at = time.monotonic()
     self._review_last_elapsed = -1
@@ -502,7 +505,11 @@ def provider_generate_review(self):
     )
 
     def worker():
-        client = Groq(api_key=key)
+        client = Groq(
+            api_key=key,
+            timeout=REQUEST_TIMEOUT_SECONDS,
+            max_retries=1,
+        )
         errors = []
         models = [FAST_GROQ_REVIEW_MODEL]
         if conversation_model not in models:
@@ -528,13 +535,14 @@ def provider_generate_review(self):
                 raw = (response.choices[0].message.content or "").strip()
                 if not raw:
                     raise RuntimeError("returned no text")
-                text = structured_model_output_to_text(raw, level)
-                self._review_queue.put(("ok", text))
+                text = structured_model_output_to_text(raw, level, rows)
+                self._review_queue.put((generation, "ok", text))
                 return
             except Exception as exc:
                 errors.append(f"{model}: {exc}")
 
         self._review_queue.put((
+            generation,
             "error",
             "Groq coaching review could not be generated.\n\n" + "\n\n".join(errors[-2:]),
         ))

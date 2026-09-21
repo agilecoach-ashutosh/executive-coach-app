@@ -10,7 +10,7 @@ from tkinter import filedialog, messagebox, ttk
 import keyring
 import sounddevice as sd
 
-from coaching import Transcript
+from coaching import IMMINENT_DANGER_RESPONSE, Transcript, detects_imminent_danger
 from engine import LiveEngine
 
 BG = '#050810'
@@ -58,6 +58,8 @@ class App(tk.Tk):
         self.envelope = 0.0
         self.conversation_visible = True
         self.focused = False
+        self._safety_alerted = False
+        self.audio_exported = True
 
         self.display_state = tk.StringVar(value='Ready when you are')
         self.display_hint = tk.StringVar(value='A quiet space for whatever matters.')
@@ -693,6 +695,8 @@ class App(tk.Tk):
 
         self.transcript = Transcript()
         self.dirty = False
+        self.audio_exported = False
+        self._safety_alerted = False
         self.render()
         self.muted.set(False)
         self.hold.set(False)
@@ -726,6 +730,16 @@ class App(tk.Tk):
         if not self.engine or not self.engine.is_alive() or self.state.get() == 'Connecting…':
             messagebox.showinfo('Start a session', 'Begin and connect before sending a message.')
             return
+        if (
+            getattr(self, 'practice_mode', 'coachee') != 'coach'
+            and detects_imminent_danger(text)
+        ):
+            self.transcript.boundary = True
+            self.transcript.add('Coachee', text)
+            self.message.set('')
+            self._show_safety_alert(IMMINENT_DANGER_RESPONSE)
+            self.render()
+            return
         self.command('text', text)
         self.message.set('')
 
@@ -734,6 +748,22 @@ class App(tk.Tk):
             self.engine.stop()
             self.state.set('Stopping…')
             self.connection_state.set('●  Ending')
+
+    def _show_safety_alert(self, text):
+        if self._safety_alerted:
+            return
+        self._safety_alerted = True
+        if self.engine and self.engine.is_alive():
+            self.engine.stop()
+        self.transcript.boundary = True
+        self.transcript.add('Session note', text)
+        self.transcript.boundary = True
+        self.dirty = True
+        self.state.set('Safety support needed')
+        self.connection_state.set('●  Session ending')
+        if self.consent.get():
+            self.consent.set(False)
+        messagebox.showwarning('Immediate safety support', text, parent=self)
 
     def forget_key(self):
         try:
@@ -773,7 +803,9 @@ class App(tk.Tk):
                 self.connection_state.set('●  Live')
                 self.set_session_controls(True)
             elif kind == 'disconnected':
-                self.state.set('Session complete')
+                self.state.set(
+                    'Safety support needed' if self._safety_alerted else 'Session complete'
+                )
                 self.connection_state.set('●  Ready')
                 self.set_session_controls(False)
                 self.level = 0
@@ -782,6 +814,9 @@ class App(tk.Tk):
                 self.transcript.add('Session note', value)
                 self.transcript.boundary = True
                 self.dirty, changed = True, True
+            elif kind == 'safety':
+                self._show_safety_alert(value)
+                changed = True
             elif kind == 'error':
                 self.connection_state.set('●  Needs attention')
                 messagebox.showerror(
@@ -1010,13 +1045,30 @@ class App(tk.Tk):
         return True
 
     def confirm_unsaved(self):
-        if not self.dirty:
-            return True
-        choice = messagebox.askyesnocancel(
-            'Save conversation?',
-            'Export the current transcript before continuing?',
+        if self.dirty:
+            choice = messagebox.askyesnocancel(
+                'Save conversation?',
+                'Export the current transcript before continuing?',
+            )
+            if choice is None:
+                return False
+            if choice is True and not self.save():
+                return False
+
+        engine = self.engine
+        has_audio = bool(
+            engine
+            and hasattr(engine, 'has_audio')
+            and engine.has_audio()
         )
-        return self.save() if choice is True else choice is False
+        if has_audio and not self.audio_exported:
+            return messagebox.askyesno(
+                'Discard unexported session audio?',
+                'This session still has audio in memory that has not been exported. '
+                'Continue and permanently discard that audio?',
+                icon='warning',
+            )
+        return True
 
     def close(self):
         if self.engine and self.engine.is_alive():

@@ -88,6 +88,19 @@ class GroqEngineHelperTests(unittest.TestCase):
             response_format="wav",
         )
 
+    def test_text_imminent_danger_stops_before_chat_generation(self):
+        engine = self.make_engine()
+        engine._generate_and_speak = Mock()
+
+        engine._respond_to_text(
+            'I have a plan to hurt myself now.',
+            visible_input=True,
+        )
+
+        self.assertTrue(engine.stopping.is_set())
+        self.assertTrue(any(kind == 'safety' for kind, _ in list(engine.events.queue)))
+        engine._generate_and_speak.assert_not_called()
+
 
 if __name__ == "__main__":
     unittest.main()

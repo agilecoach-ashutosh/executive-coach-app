@@ -87,6 +87,31 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         self.assertIn(('Coachee', 'I feel stuck'), events)
         self.assertIn(('Coach', 'What feels stuck?'), events)
 
+    async def test_receive_stops_before_coaching_on_imminent_danger(self):
+        engine = self.make_engine()
+
+        def ns(**kwargs):
+            return types.SimpleNamespace(**kwargs)
+
+        content = ns(
+            interrupted=False,
+            input_transcription=ns(text='I intend to kill myself now.'),
+            output_transcription=None,
+            model_turn=None,
+            turn_complete=False,
+        )
+
+        async def receive():
+            yield ns(go_away=None, server_content=content)
+
+        engine.session.receive = receive
+        await engine.receive_loop()
+
+        events = list(engine.events.queue)
+        self.assertTrue(engine.stopping.is_set())
+        self.assertTrue(any(kind == 'safety' for kind, _ in events))
+        self.assertFalse(any(kind == 'Coach' for kind, _ in events))
+
     async def test_mute_command_drains_already_captured_audio(self):
         engine = self.make_engine()
         engine.audio_in.put(b'private')

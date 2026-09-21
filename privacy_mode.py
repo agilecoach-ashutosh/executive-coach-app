@@ -9,12 +9,12 @@ This layer adds:
 """
 from __future__ import annotations
 
+import queue
 import tkinter as tk
-from tkinter import messagebox
 import webbrowser
+from tkinter import messagebox
 
 import provider_mode as provider
-
 
 base = provider.base
 _original_init = base.App.__init__
@@ -173,8 +173,9 @@ def clear_session_data(self, parent=None):
     has_transcript = bool(getattr(self.transcript, "rows", []))
     recorder = getattr(engine, "recorder", None) if engine else None
     has_audio = bool(recorder and recorder.has_audio())
+    has_review = bool(getattr(self, "practice_review_text", ""))
 
-    if not has_transcript and not has_audio:
+    if not has_transcript and not has_audio and not has_review:
         messagebox.showinfo(
             "Session data",
             "There is no in-memory session transcript or audio to discard.",
@@ -202,6 +203,7 @@ def clear_session_data(self, parent=None):
 
     self.transcript = base.Transcript()
     self.dirty = False
+    self.audio_exported = True
     self.engine = None
     self.level = 0
     self.set_session_controls(False)
@@ -218,6 +220,12 @@ def clear_session_data(self, parent=None):
         provider.review._clear_review_state(self)
     except Exception:
         pass
+
+    while True:
+        try:
+            self.events.get_nowait()
+        except queue.Empty:
+            break
 
     self.render()
     messagebox.showinfo(

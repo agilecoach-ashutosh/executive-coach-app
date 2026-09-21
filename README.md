@@ -127,7 +127,7 @@ Run:
 Setup.cmd
 ```
 
-The setup script creates a local virtual environment, installs the dependencies from `requirements.txt`, and creates a developer shortcut.
+The setup script creates a local virtual environment, installs the dependencies from `requirements.txt` using the validated versions in `constraints.txt`, and creates a developer shortcut.
 
 Start the application with:
 
@@ -150,7 +150,7 @@ Run:
 Setup-Mac.command
 ```
 
-The setup script creates a local virtual environment and installs the dependencies from `requirements.txt`.
+The setup script creates a local virtual environment and installs the dependencies from `requirements.txt` using the validated versions in `constraints.txt`.
 
 Start the application with:
 

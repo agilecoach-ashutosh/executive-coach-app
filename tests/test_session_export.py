@@ -1,6 +1,7 @@
 import tempfile
 import unittest
 from pathlib import Path
+from unittest.mock import patch
 
 import numpy as np
 from docx import Document
@@ -9,6 +10,29 @@ from session_export import SessionAudioRecorder, export_transcript_docx, format_
 
 
 class SessionExportTests(unittest.TestCase):
+    def test_audio_memory_cap_sets_truncation_and_clear_resets_it(self):
+        recorder = SessionAudioRecorder()
+        recorder.start(10.0)
+        with patch("session_export.MAX_AUDIO_BYTES", 8):
+            recorder.append(b"\x01\x00" * 6, 16_000, now=10.1)
+
+        self.assertTrue(recorder.has_audio())
+        self.assertTrue(recorder.is_truncated())
+        self.assertEqual(sum(len(segment.data) for segment in recorder._segments), 8)
+
+        recorder.clear()
+        self.assertFalse(recorder.has_audio())
+        self.assertFalse(recorder.is_truncated())
+
+    def test_audio_duration_cap_rejects_late_frames(self):
+        recorder = SessionAudioRecorder()
+        recorder.start(10.0)
+        with patch("session_export.MAX_AUDIO_DURATION_SECONDS", 1):
+            recorder.append(b"\x01\x00" * 10, 16_000, now=11.1)
+
+        self.assertFalse(recorder.has_audio())
+        self.assertTrue(recorder.is_truncated())
+
     def test_elapsed_timestamp_format(self):
         self.assertEqual(format_elapsed(0), "00:00:00")
         self.assertEqual(format_elapsed(137), "00:02:17")

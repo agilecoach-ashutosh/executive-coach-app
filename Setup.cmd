@@ -16,7 +16,7 @@ py -3.12 -m venv .venv
 if errorlevel 1 goto failed
 ".venv\Scripts\python.exe" -m pip install --upgrade pip
 if errorlevel 1 goto failed
-".venv\Scripts\python.exe" -m pip install -r requirements.txt
+".venv\Scripts\python.exe" -m pip install -r requirements.txt -c constraints.txt
 if errorlevel 1 goto failed
 ".venv\Scripts\python.exe" windows_setup.py
 if errorlevel 1 goto failed

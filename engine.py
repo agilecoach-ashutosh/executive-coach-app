@@ -10,7 +10,12 @@ import sounddevice as sd
 from google import genai
 from google.genai import types
 
-from coaching import SYSTEM_PROMPT, TurnGate
+from coaching import (
+    IMMINENT_DANGER_RESPONSE,
+    SYSTEM_PROMPT,
+    TurnGate,
+    detects_imminent_danger,
+)
 from session_export import SessionAudioRecorder
 
 
@@ -57,6 +62,7 @@ class LiveEngine(threading.Thread):
         self.playback_until = 0.0
         self.recorder = SessionAudioRecorder()
         self.recorder.start(time.monotonic())
+        self._safety_input = ""
 
     def emit(self, kind, value=''):
         self.events.put((kind, value))
@@ -82,6 +88,9 @@ class LiveEngine(threading.Thread):
 
     def export_audio(self, filename):
         self.recorder.export_mp3(filename)
+
+    def audio_truncated(self):
+        return self.recorder.is_truncated()
 
     def capture(self, data, frames, timing, status):
         if self.stopping.is_set() or self.muted:
@@ -345,7 +354,16 @@ class LiveEngine(threading.Thread):
                     )
 
                 if content.input_transcription and content.input_transcription.text:
-                    self.emit(self.input_role, content.input_transcription.text)
+                    input_text = content.input_transcription.text
+                    self.emit(self.input_role, input_text)
+                    self._safety_input = (self._safety_input + " " + input_text)[-2000:]
+                    if (
+                        self.input_role == "Coachee"
+                        and detects_imminent_danger(self._safety_input)
+                    ):
+                        self.emit("safety", IMMINENT_DANGER_RESPONSE)
+                        self.stop()
+                        return
 
                 if (
                     content.output_transcription
@@ -368,6 +386,7 @@ class LiveEngine(threading.Thread):
 
                 if content.turn_complete:
                     self.generating = False
+                    self._safety_input = ""
                     self.emit('boundary')
                     self.emit(
                         'status',

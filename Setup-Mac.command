@@ -39,7 +39,7 @@ printf "Using %s\n" "$PYTHON_BIN"
 
 VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python"
 "$VENV_PYTHON" -m pip install --upgrade pip || fail "Could not update pip."
-"$VENV_PYTHON" -m pip install -r requirements.txt || fail "Could not install the application dependencies."
+"$VENV_PYTHON" -m pip install -r requirements.txt -c constraints.txt || fail "Could not install the application dependencies."
 
 "$VENV_PYTHON" -c 'import tkinter' || \
   fail "Python was installed without Tk support. Install the official Python 3.12 package from python.org and run setup again."

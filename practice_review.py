@@ -5,12 +5,11 @@ import queue
 import threading
 import time
 import tkinter as tk
-from tkinter import filedialog, messagebox
 from pathlib import Path
+from tkinter import filedialog, messagebox
 
 import practice_mode as practice
 from reviewer import calculate_metrics, format_duration, generate_review
-
 
 base = practice.base
 _original_init = base.App.__init__
@@ -36,6 +35,7 @@ def review_init(self):
     self._review_export_button = None
     self._review_started_at = None
     self._review_last_elapsed = -1
+    self._review_generation = 0
 
     self.review_button = self.button(
         self.header,
@@ -48,6 +48,12 @@ def review_init(self):
 
 
 def _clear_review_state(self):
+    self._review_generation = getattr(self, "_review_generation", 0) + 1
+    while True:
+        try:
+            self._review_queue.get_nowait()
+        except queue.Empty:
+            break
     self.practice_session_started_at = None
     self.practice_session_ended_at = None
     self.practice_review_shown = False
@@ -56,6 +62,16 @@ def _clear_review_state(self):
     self._review_last_elapsed = -1
     if hasattr(self, "review_button"):
         self.review_button.configure(state="disabled")
+
+
+def _begin_review_generation(self):
+    self._review_generation = getattr(self, "_review_generation", 0) + 1
+    while True:
+        try:
+            self._review_queue.get_nowait()
+        except queue.Empty:
+            break
+    return self._review_generation
 
 
 def review_select_coachee_mode(self, dialog=None):
@@ -376,6 +392,7 @@ def generate_coaching_review(self):
     metrics = _current_metrics(self)
     rows = list(self.transcript.rows)
     scenario = self.current_scenario
+    generation = _begin_review_generation(self)
 
     self._review_started_at = time.monotonic()
     self._review_last_elapsed = -1
@@ -391,9 +408,9 @@ def generate_coaching_review(self):
     def worker():
         try:
             result = generate_review(api_key, level, rows, metrics, scenario)
-            self._review_queue.put(("ok", result))
+            self._review_queue.put((generation, "ok", result))
         except Exception as exc:
-            self._review_queue.put(("error", str(exc)))
+            self._review_queue.put((generation, "error", str(exc)))
 
     threading.Thread(target=worker, daemon=True).start()
     self.after(120, self._poll_review_result)
@@ -401,16 +418,22 @@ def generate_coaching_review(self):
 
 def _poll_review_result(self):
     try:
-        status, value = self._review_queue.get_nowait()
+        generation, status, value = self._review_queue.get_nowait()
     except queue.Empty:
         started = getattr(self, "_review_started_at", None)
-        if started:
-            elapsed = int(max(0, time.monotonic() - started))
-            if elapsed != getattr(self, "_review_last_elapsed", -1):
-                self._review_last_elapsed = elapsed
-                if self._review_generate_button and self._review_generate_button.winfo_exists():
-                    self._review_generate_button.configure(text=f"Reviewing… {elapsed}s")
+        if not started:
+            return
+        elapsed = int(max(0, time.monotonic() - started))
+        if elapsed != getattr(self, "_review_last_elapsed", -1):
+            self._review_last_elapsed = elapsed
+            if self._review_generate_button and self._review_generate_button.winfo_exists():
+                self._review_generate_button.configure(text=f"Reviewing… {elapsed}s")
         self.after(120, self._poll_review_result)
+        return
+
+    if generation != getattr(self, "_review_generation", 0):
+        if getattr(self, "_review_started_at", None):
+            self.after(120, self._poll_review_result)
         return
 
     self._review_started_at = None

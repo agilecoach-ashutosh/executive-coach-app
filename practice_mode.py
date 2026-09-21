@@ -22,7 +22,6 @@ from scenarios import (
     scenario_matches,
 )
 
-
 base = performance.base
 
 _original_init = base.App.__init__
@@ -46,6 +45,8 @@ def _center(window, parent, width, height):
 def _reset_for_mode(self):
     self.transcript = base.Transcript()
     self.dirty = False
+    self.audio_exported = True
+    self._safety_alerted = False
     self.level = 0
     self.envelope = 0.0
     self.muted.set(False)
@@ -585,6 +586,8 @@ def practice_start(self):
 
     self.transcript = base.Transcript()
     self.dirty = False
+    self.audio_exported = False
+    self._safety_alerted = False
     self.render()
     self.muted.set(False)
     self.hold.set(False)

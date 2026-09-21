@@ -1,8 +1,23 @@
 import unittest
-from coaching import TurnGate, Transcript
+
+from coaching import Transcript, TurnGate, detects_imminent_danger
 
 
 class TurnTests(unittest.TestCase):
+    def test_explicit_imminent_self_harm_is_detected(self):
+        self.assertTrue(
+            detects_imminent_danger(
+                'I have the means to hurt myself and intend to do it now.'
+            )
+        )
+
+    def test_non_imminent_or_hypothetical_language_is_not_escalated(self):
+        self.assertFalse(detects_imminent_danger('I am not suicidal.'))
+        self.assertFalse(
+            detects_imminent_danger('This is a hypothetical test case about suicide now.')
+        )
+        self.assertFalse(detects_imminent_danger('I feel overwhelmed and hopeless today.'))
+
     def test_quiet_does_not_trigger_coach(self):
         gate = TurnGate()
         for now in range(120):

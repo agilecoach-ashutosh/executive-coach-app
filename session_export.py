@@ -8,7 +8,6 @@ written only when the user explicitly chooses Export audio.
 """
 from __future__ import annotations
 
-import math
 import threading
 from dataclasses import dataclass
 from pathlib import Path
@@ -19,9 +18,10 @@ from docx import Document
 from docx.enum.text import WD_ALIGN_PARAGRAPH
 from docx.shared import Inches, Pt
 
-
 TARGET_AUDIO_RATE = 24000
 MP3_BITRATE_KBPS = 96
+MAX_AUDIO_DURATION_SECONDS = 90 * 60
+MAX_AUDIO_BYTES = 192 * 1024 * 1024
 
 
 def format_elapsed(seconds: float) -> str:
@@ -110,27 +110,47 @@ class SessionAudioRecorder:
         self.started_at: float | None = None
         self._segments: list[_AudioSegment] = []
         self._lock = threading.Lock()
+        self._captured_bytes = 0
+        self._truncated = False
 
     def start(self, started_at: float):
         with self._lock:
             self.started_at = float(started_at)
             self._segments.clear()
+            self._captured_bytes = 0
+            self._truncated = False
 
     def clear(self):
         with self._lock:
             self.started_at = None
             self._segments.clear()
+            self._captured_bytes = 0
+            self._truncated = False
 
     def append(self, pcm: bytes, sample_rate: int, channels: int = 1, now: float | None = None):
-        if not pcm or not self.started_at:
+        if not pcm or self.started_at is None:
             return
         import time
 
         timestamp = time.monotonic() if now is None else float(now)
         offset = max(0.0, timestamp - self.started_at)
         incoming = bytes(pcm)
+        frame_size = max(1, int(channels) * 2)
 
         with self._lock:
+            remaining_duration_bytes = max(
+                0,
+                int((MAX_AUDIO_DURATION_SECONDS - offset) * sample_rate) * frame_size,
+            )
+            remaining_memory_bytes = max(0, MAX_AUDIO_BYTES - self._captured_bytes)
+            allowed = min(len(incoming), remaining_duration_bytes, remaining_memory_bytes)
+            allowed -= allowed % frame_size
+            if allowed < len(incoming):
+                self._truncated = True
+            incoming = incoming[:allowed]
+            if not incoming:
+                return
+
             # Merge short contiguous callback chunks so long sessions do not create
             # tens of thousands of tiny Python objects. Cap merged blocks at 5 sec.
             if self._segments:
@@ -143,14 +163,20 @@ class SessionAudioRecorder:
                     and last.duration < 5.0
                 ):
                     last.data.extend(incoming)
+                    self._captured_bytes += len(incoming)
                     return
             self._segments.append(
                 _AudioSegment(offset, int(sample_rate), int(channels), bytearray(incoming))
             )
+            self._captured_bytes += len(incoming)
 
     def has_audio(self) -> bool:
         with self._lock:
             return any(segment.data for segment in self._segments)
+
+    def is_truncated(self) -> bool:
+        with self._lock:
+            return self._truncated
 
     def duration_seconds(self) -> float:
         with self._lock:
@@ -190,11 +216,9 @@ class SessionAudioRecorder:
 
     def export_mp3(self, filename: str | Path):
         with self._lock:
-            segments = [
-                _AudioSegment(s.start_offset, s.sample_rate, s.channels, bytearray(s.data))
-                for s in self._segments
-                if s.data
-            ]
+            # Export is offered after the engine stops. A shallow snapshot avoids
+            # duplicating the complete recording in memory before encoding begins.
+            segments = [s for s in self._segments if s.data]
 
         if not segments:
             raise RuntimeError("No session audio is available to export.")

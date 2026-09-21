@@ -18,13 +18,14 @@ import numpy as np
 import sounddevice as sd
 from groq import Groq
 
-from coaching import TurnGate
+from coaching import IMMINENT_DANGER_RESPONSE, TurnGate, detects_imminent_danger
 from session_export import SessionAudioRecorder
 
 DEFAULT_CHAT_MODEL = "openai/gpt-oss-120b"
 DEFAULT_STT_MODEL = "whisper-large-v3-turbo"
 DEFAULT_TTS_MODEL = "canopylabs/orpheus-v1-english"
 DEFAULT_VOICE = "troy"
+REQUEST_TIMEOUT_SECONDS = 30.0
 
 
 def split_for_tts(text: str, limit: int = 190) -> list[str]:
@@ -152,6 +153,9 @@ class GroqEngine(threading.Thread):
     def export_audio(self, filename):
         self.recorder.export_mp3(filename)
 
+    def audio_truncated(self):
+        return self.recorder.is_truncated()
+
     def capture(self, data, frames, timing, status):
         if self.stopping.is_set() or self.muted or self.generating:
             return
@@ -165,7 +169,11 @@ class GroqEngine(threading.Thread):
 
     def run(self):
         try:
-            self.client = Groq(api_key=self.key)
+            self.client = Groq(
+                api_key=self.key,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+                max_retries=1,
+            )
             with sd.RawInputStream(
                 samplerate=16000,
                 channels=1,
@@ -278,6 +286,10 @@ class GroqEngine(threading.Thread):
                 return
             self.emit("boundary")
             self.emit(self.input_role, text)
+            if self.input_role == "Coachee" and detects_imminent_danger(text):
+                self.emit("safety", IMMINENT_DANGER_RESPONSE)
+                self.stop()
+                return
             self._generate_and_speak(text)
         finally:
             self.generating = False
@@ -291,6 +303,10 @@ class GroqEngine(threading.Thread):
             if visible_input:
                 self.emit("boundary")
                 self.emit(self.input_role, text)
+                if self.input_role == "Coachee" and detects_imminent_danger(text):
+                    self.emit("safety", IMMINENT_DANGER_RESPONSE)
+                    self.stop()
+                    return
             self._generate_and_speak(text, keep_user=visible_input)
         finally:
             self.generating = False

@@ -7,11 +7,10 @@ import tkinter as tk
 from pathlib import Path
 from tkinter import filedialog, messagebox
 
-import privacy_mode as provider
 import practice_review as review
+import privacy_mode as provider
 from review_export import export_review_docx
 from session_export import export_transcript_docx, format_elapsed
-
 
 base = provider.base
 _original_app_init = base.App.__init__
@@ -147,9 +146,18 @@ def export_session_audio(self):
         messagebox.showerror("Audio export failed", str(exc), parent=parent)
         return False
 
+    self.audio_exported = True
+    truncated = bool(
+        hasattr(engine, "audio_truncated") and engine.audio_truncated()
+    )
     messagebox.showinfo(
         "Audio exported",
-        "The coaching conversation was saved as an MP3 for reflection.",
+        (
+            "The available coaching-session audio was saved as an MP3. Presence stopped "
+            "retaining additional audio after its 90-minute/192 MB safety limit."
+            if truncated
+            else "The coaching conversation was saved as an MP3 for reflection."
+        ),
         parent=parent,
     )
     return True

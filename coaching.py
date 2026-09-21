@@ -1,4 +1,5 @@
-"""Original coaching instructions and deterministic turn-taking policy."""
+"""Coaching instructions, deterministic safety checks, and turn-taking policy."""
+import re
 from dataclasses import dataclass
 from datetime import datetime
 
@@ -16,7 +17,8 @@ conversation. Collaboratively clarify a useful session outcome and how they woul
 recognize progress, across separate turns. Do not turn this into a questionnaire.
 The client owns the agenda; check before changing direction. Respect a request to
 stop, decline a topic, or remain silent. Never claim complete confidentiality:
-audio and text are processed by Google; the app saves text only on explicit export.
+audio and text are processed by the cloud AI provider selected in Presence; the app
+writes transcript/audio files only on explicit export.
 
 EMPATHY THAT FITS THIS PERSON
 Respond to the specific experience shared, including joy, disappointment, mixed
@@ -138,6 +140,42 @@ or qualified human support. Do not keep probing root causes in an emergency.
 Do not promote dependence, exclusivity, or imply you replace human relationships.
 Never promise perfect accuracy, confidentiality, or coaching outcomes.
 """
+
+
+IMMINENT_DANGER_RESPONSE = (
+    "This sounds like an immediate safety emergency, so Presence is ending the AI coaching "
+    "session. Move away from anything you could use to hurt yourself, contact your local "
+    "emergency service now, and ask a trusted person nearby to stay with you. If you can, "
+    "go to the nearest emergency department. Presence cannot provide crisis care."
+)
+
+_SELF_HARM_PATTERN = re.compile(
+    r"\b(?:kill|hurt|harm|end)\s+(?:myself|my\s+life)\b|"
+    r"\b(?:suicide|suicidal|self[- ]harm)\b",
+    re.IGNORECASE,
+)
+_IMMEDIACY_PATTERN = re.compile(
+    r"\b(?:right\s+now|now|tonight|today|immediately|about\s+to|intend(?:ing)?\s+to|"
+    r"plan(?:ning)?\s+to|have\s+(?:the\s+)?means|have\s+(?:a\s+)?(?:gun|weapon|knife|pills)|"
+    r"ready\s+to|cannot\s+stay\s+safe|can't\s+stay\s+safe)\b",
+    re.IGNORECASE,
+)
+_NEGATED_OR_HYPOTHETICAL_PATTERN = re.compile(
+    r"\b(?:not\s+suicidal|not\s+going\s+to|no\s+intention|do\s+not\s+intend|"
+    r"don't\s+intend|used\s+to|in\s+the\s+past|hypothetical|example|test\s+case)\b",
+    re.IGNORECASE,
+)
+
+
+def detects_imminent_danger(text: str) -> bool:
+    """Detect narrow, explicit self-harm urgency as a deterministic backstop."""
+    normalized = " ".join((text or "").split())
+    if not normalized or _NEGATED_OR_HYPOTHETICAL_PATTERN.search(normalized):
+        return False
+    return bool(
+        _SELF_HARM_PATTERN.search(normalized)
+        and _IMMEDIACY_PATTERN.search(normalized)
+    )
 
 
 # Distilled from Agile Orbit; provenance and full practice bank are in reference/.
