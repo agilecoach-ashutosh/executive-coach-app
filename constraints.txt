@@ -1,6 +1,6 @@
 # Reproducible direct dependency set. Update deliberately and validate on all CI platforms.
 google-genai==1.75.0
-groq==0.37.1
+groq==1.7.0
 sounddevice==0.5.6
 numpy==2.5.3
 keyring==25.7.0
