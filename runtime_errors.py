@@ -227,7 +227,10 @@ def classify_runtime_error(
         text,
         "getaddrinfo",
         "name resolution",
+        "temporary failure in name resolution",
         "dns",
+        "certificate_verify_failed",
+        "ssl error",
         "network is unreachable",
         "network unreachable",
         "connection refused",
@@ -244,18 +247,17 @@ def classify_runtime_error(
             "Connection lost",
             (
                 f"Presence Coach lost its connection to {provider_name}. Check your internet "
-                f"connection and reconnect when ready. {preserved}"
+                f"connection, VPN/proxy if you use one, and reconnect when ready. {preserved}"
             ),
         )
 
-    technical = f"\n\nTechnical detail: {clean}" if clean else ""
     return UserFacingError(
         "unknown",
         "Presence Coach couldn't continue",
         (
             "Something unexpected interrupted this request. Please try again. If it happens "
             "again, check your API key, selected model, audio devices, and internet connection."
-            f" {preserved}{technical}"
+            f" {preserved}"
         ),
     )
 
