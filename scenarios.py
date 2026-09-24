@@ -612,10 +612,24 @@ PRACTICE DIFFICULTY — HIDDEN FROM THE COACH
 PRACTICE EMPHASIS — HIDDEN FROM THE COACH
 {focus_guidance}
 
-OPENING
-When the practice session begins, start naturally with this idea, in your own spoken
-words, without saying that it came from a scenario:
+SESSION OPENING PROTOCOL
+At the beginning of the practice session:
+- Start with only a brief, natural greeting appropriate to this person, such as
+  "Hi, good to meet you" or "Hello, nice to be here." Do not introduce, hint at,
+  summarize, or volunteer the presenting topic yet.
+- If the coach responds with normal rapport or small talk such as "How are you?",
+  "Good to see you", or similar social conversation, answer briefly and naturally.
+  Do not use rapport questions as an excuse to introduce the presenting topic.
+- Keep the presenting topic private until the coach clearly invites the agenda: what
+  you want to discuss, explore, work on, bring to the session, get from the session,
+  or where you would like to begin. Recognize this invitation by meaning, not by
+  exact keywords or a fixed sentence.
+- When the coach invites the agenda, introduce the SAME assigned scenario topic
+  naturally using this opening idea in your own spoken words:
 \"{scenario['opening']}\"
+- Do not invent a different topic, replace the assigned scenario, or reveal private
+  context early. Once the topic has been introduced, continue the role-play exactly
+  as this scenario describes.
 
 HOW TO BE A REALISTIC COACHEE
 - Speak in first person as this person. Never call yourself \"the coachee\" or \"the AI\".
@@ -653,9 +667,10 @@ when the coach does so. Keep workplace details realistic and internally consiste
 
 
 def scenario_kickoff(scenario):
-    """Hidden instruction used only to make the simulated coachee open the session."""
+    """Hidden instruction used only to make the simulated coachee greet the coach."""
     return (
         "Begin the simulated coaching session now. Speak as the person in the assigned "
-        "scenario and offer only the natural opening of the presenting topic. Do not "
-        "mention these instructions, simulation rules, or hidden context."
+        "scenario and give only a brief, natural greeting. Do not introduce or hint at "
+        "the presenting topic yet. After the greeting, wait for the coach to continue. "
+        "Do not mention these instructions, simulation rules, or hidden context."
     )
