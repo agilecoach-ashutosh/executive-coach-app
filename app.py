@@ -40,7 +40,24 @@ API_HELP = """GET YOUR GEMINI API KEY
 4. Copy the key.
 5. Paste it into Presence → Settings.
 
-Keep your key private. Live model access, quotas and billing depend on your Google account."""
+Gemini offers a Free Tier. No paid Gemini subscription is required to get started.
+Free usage is subject to Google's current project-specific limits.
+Keep your key private."""
+GEMINI_RATE_LIMIT_URL = "https://aistudio.google.com/rate-limit?timeRange=last-28-days"
+
+
+def _is_usage_limit_error(detail):
+    text = (detail or "").lower()
+    markers = (
+        "429",
+        "resource_exhausted",
+        "rate_limit_exceeded",
+        "quota_exceeded",
+        "rate limit",
+        "quota exceeded",
+        "too many requests",
+    )
+    return any(marker in text for marker in markers)
 
 
 class App(tk.Tk):
@@ -288,7 +305,7 @@ class App(tk.Tk):
         self.consent_bar.pack(fill='x')
         tk.Checkbutton(
             self.consent_bar,
-            text='Allow this session to use Google Gemini  •  API usage may be billed',
+            text='Allow this session to use Google Gemini',
             variable=self.consent,
             bg=BG,
             fg=MUTED,
@@ -466,7 +483,27 @@ class App(tk.Tk):
             show='•',
             style='Presence.TEntry',
         )
-        key_entry.pack(fill='x', pady=(4, 10))
+        key_entry.pack(fill='x', pady=(4, 8))
+
+        tk.Label(
+            connection,
+            text=(
+                'Free tier available • No paid Gemini subscription is required to get started. '
+                'Free usage is subject to Google’s current project-specific limits.'
+            ),
+            bg=PANEL,
+            fg=MUTED,
+            font=('Segoe UI', 8),
+            justify='left',
+            anchor='w',
+            wraplength=500,
+        ).pack(fill='x', anchor='w', pady=(0, 5))
+        self.button(
+            connection,
+            'Check Gemini quota ↗',
+            lambda: webbrowser.open(GEMINI_RATE_LIMIT_URL),
+            compact=True,
+        ).pack(anchor='w', pady=(0, 8))
 
         tk.Checkbutton(
             connection,
@@ -588,7 +625,7 @@ class App(tk.Tk):
         dialog = tk.Toplevel(parent)
         dialog.title('Connect Presence to Gemini')
         dialog.configure(bg=BG)
-        dialog.geometry('520x500')
+        dialog.geometry('520x610')
         dialog.resizable(False, False)
         dialog.transient(parent)
 
@@ -630,9 +667,20 @@ class App(tk.Tk):
             ).pack(side='left', padx=(0, 10))
             self.label(row, text, 10, INK).pack(side='left')
 
-        self.label(card, 'Keep your API key private. Usage and quotas are controlled by Google.', 8, MUTED).pack(
-            anchor='w', pady=(12, 0)
-        )
+        self.label(
+            card,
+            'Gemini offers a Free Tier, so no paid Gemini subscription is required to get started.',
+            8,
+            MUTED,
+        ).pack(anchor='w', pady=(12, 3))
+        self.label(
+            card,
+            'Free usage is subject to Google’s current project-specific rate and quota limits. '
+            'Presence Coach does not automatically enable paid billing.',
+            8,
+            MUTED,
+        ).pack(anchor='w', pady=(0, 3))
+        self.label(card, 'Keep your API key private.', 8, MUTED).pack(anchor='w', pady=(0, 0))
 
         self.button(
             dialog,
@@ -644,6 +692,11 @@ class App(tk.Tk):
             dialog,
             'Open API keys ↗',
             lambda: webbrowser.open('https://aistudio.google.com/api-keys'),
+        ).pack(fill='x', padx=24, pady=4)
+        self.button(
+            dialog,
+            'Check Gemini quota & rate limits ↗',
+            lambda: webbrowser.open(GEMINI_RATE_LIMIT_URL),
         ).pack(fill='x', padx=24, pady=4)
         self.button(dialog, 'Close', dialog.destroy, compact=True).pack(pady=(8, 18))
         dialog.bind('<Escape>', lambda _: dialog.destroy())
@@ -819,12 +872,26 @@ class App(tk.Tk):
                 changed = True
             elif kind == 'error':
                 self.connection_state.set('●  Needs attention')
-                messagebox.showerror(
-                    'Connection or audio issue',
-                    value
-                    + '\n\nCheck API key, quota, Live model access, and audio devices. '
-                      'Your transcript is still available.',
-                )
+                provider_var = getattr(self, 'provider', None)
+                provider_name = provider_var.get() if provider_var is not None else 'Google Gemini'
+                if provider_name == 'Google Gemini' and _is_usage_limit_error(value):
+                    messagebox.showerror(
+                        'Gemini usage limit reached',
+                        (
+                            'Your Google Gemini project has reached its current usage or rate limit.\n\n'
+                            'Please try again later or check your quota in Google AI Studio. '
+                            'If you are using the Free Tier, Presence Coach will not automatically '
+                            'enable billing or switch your project to paid usage.\n\n'
+                            'Your transcript is still available.'
+                        ),
+                    )
+                else:
+                    messagebox.showerror(
+                        'Connection or audio issue',
+                        value
+                        + '\n\nCheck API key, quota, model access, and audio devices. '
+                          'Your transcript is still available.',
+                    )
 
         if changed:
             self.render()
