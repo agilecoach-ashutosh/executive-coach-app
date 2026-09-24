@@ -42,7 +42,12 @@ When Gemini is selected, live voice/text and generated responses are processed t
 
 Google's current Gemini API terms distinguish between unpaid and paid services. Google states that unpaid-service content may be used to improve Google products and may be reviewed by humans, and it instructs users not to submit sensitive, confidential, or personal information to unpaid services. For Paid Services, Google states that prompts and responses are not used to improve its products and are processed under Google's Data Processing Addendum, subject to limited logging for safety, security, and legal/regulatory purposes.
 
+Google's current pricing page lists the standard Free Tier for `gemini-3.8-live` as free of charge for input and output, subject to project/model limits, and marks Free Tier content as used to improve Google products while Paid Tier content is not used for that purpose.
+
 Google's current terms also state that API clients made available to users in the European Economic Area, Switzerland, or the United Kingdom must use Paid Services.
+
+Current pricing and data-use information:  
+https://ai.google.dev/gemini-api/docs/pricing
 
 Current terms:  
 https://ai.google.dev/gemini-api/terms
