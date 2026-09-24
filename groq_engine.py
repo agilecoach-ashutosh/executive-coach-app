@@ -7,6 +7,7 @@ providers without changing transcript or session-control behavior.
 from __future__ import annotations
 
 import collections
+import contextlib
 import io
 import queue
 import re
@@ -174,14 +175,20 @@ class GroqEngine(threading.Thread):
                 timeout=REQUEST_TIMEOUT_SECONDS,
                 max_retries=1,
             )
-            with sd.RawInputStream(
-                samplerate=16000,
-                channels=1,
-                dtype="int16",
-                blocksize=640,
-                device=self.mic,
-                callback=self.capture,
-            ):
+            with contextlib.ExitStack() as audio_stack:
+                try:
+                    mic_stream = sd.RawInputStream(
+                        samplerate=16000,
+                        channels=1,
+                        dtype="int16",
+                        blocksize=640,
+                        device=self.mic,
+                        callback=self.capture,
+                    )
+                    audio_stack.enter_context(mic_stream)
+                except Exception as exc:
+                    raise RuntimeError(f"MIC_DEVICE_ERROR: {exc}") from exc
+
                 self.emit("connected")
                 if self.kickoff:
                     self._respond_to_text(self.kickoff, visible_input=False)
@@ -391,13 +398,19 @@ class GroqEngine(threading.Thread):
                     f"Groq TTS returned unsupported {sample_width * 8}-bit WAV audio."
                 )
 
-            with sd.RawOutputStream(
-                samplerate=sample_rate,
-                channels=channels,
-                dtype="int16",
-                device=self.speaker,
-                blocksize=960,
-            ) as stream:
+            with contextlib.ExitStack() as audio_stack:
+                try:
+                    speaker_stream = sd.RawOutputStream(
+                        samplerate=sample_rate,
+                        channels=channels,
+                        dtype="int16",
+                        device=self.speaker,
+                        blocksize=960,
+                    )
+                    stream = audio_stack.enter_context(speaker_stream)
+                except Exception as exc:
+                    raise RuntimeError(f"SPEAKER_DEVICE_ERROR: {exc}") from exc
+
                 while not self.stopping.is_set() and not self.interrupting.is_set():
                     data = wav.readframes(960)
                     if not data:
