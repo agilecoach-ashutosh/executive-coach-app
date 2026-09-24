@@ -293,6 +293,12 @@ Automated tests and hardware mocks do not replace real microphone, speaker, and 
 
 ## Troubleshooting
 
+### Runtime connection and audio messages
+
+Presence translates common provider and device failures into actionable messages instead of displaying raw API/PortAudio errors. This includes invalid API keys, provider access errors, quota/rate limits, unavailable models, network timeouts/disconnections, temporary provider outages, microphone permission/device failures, speaker failures, and audio-overload conditions.
+
+If a live connection fails, Presence keeps the session in **Needs attention / Connection issue** state instead of incorrectly marking it as a completed session. Any transcript already captured remains available.
+
 ### Microphone or speaker is unavailable
 
 Select the correct devices in Presence settings. In Windows, also open **Settings → Privacy & security → Microphone** and allow desktop applications to use the microphone.
@@ -301,9 +307,13 @@ Select the correct devices in Presence settings. In Windows, also open **Setting
 
 Confirm that the selected provider matches the key entered in Settings. Use the information button in Presence to open the provider's official API-key page.
 
-### Gemini usage or rate limit reached
+### Gemini or Groq usage/rate limit reached
 
-If Presence reports **Gemini usage limit reached**, the Google project has hit a current rate or quota limit. Try again later or open the Google AI Studio rate-limit page to review the project's active limits. Presence does not automatically enable billing or move a Free Tier project to paid usage.
+If Presence reports a provider **usage limit reached** message, the selected API project has hit a current rate or quota limit. Try again later or review that provider's quota/rate-limit page. Presence does not automatically enable billing or move a free project to paid usage.
+
+### Export cannot be saved
+
+Presence distinguishes common local export failures such as a locked/unwritable file, a read-only folder, a missing save location, or insufficient disk space. Choose another location or resolve the condition shown in the message, then retry.
 
 ### Audio export is unavailable
 
