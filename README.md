@@ -82,6 +82,22 @@ Current default model:
 gemini-3.8-live
 ```
 
+### Gemini Free Tier, quotas, and billing
+
+Google currently lists the standard Free Tier for `gemini-3.8-live` as free of charge for input and output. No paid Gemini subscription is required to get started with Presence Coach.
+
+Free usage is still subject to Google's current project-specific and model-specific rate and quota limits. Google applies those limits per project rather than per individual API key, and the active limits can be viewed in Google AI Studio.
+
+If a rate or quota limit is reached, Google may return a `429 RESOURCE_EXHAUSTED`, `rate_limit_exceeded`, or `quota_exceeded` response. Presence Coach shows a friendlier usage-limit message when it detects this condition. The user can wait for the applicable limit to reset or review the project's current limits in Google AI Studio.
+
+Presence Coach does **not** automatically enable Cloud Billing, upgrade a Gemini project, or switch a Free Tier project to paid usage. Moving from the Free Tier to a paid Gemini API tier requires billing to be set up for the Google project.
+
+- [Gemini API pricing](https://ai.google.dev/gemini-api/docs/pricing)
+- [Gemini API rate limits](https://ai.google.dev/gemini-api/docs/rate-limits)
+- [Google AI Studio rate limits](https://aistudio.google.com/rate-limit?timeRange=last-28-days)
+
+Provider pricing, quotas, model availability, and terms can change, so users should verify Google's current information.
+
 ### Groq pipeline
 
 ```text
@@ -171,6 +187,8 @@ Start-Mac.command
 9. Select **Begin**.
 
 The information button inside Presence opens the official API-key pages for the supported providers.
+
+For Gemini, a Free Tier can be used to get started without a paid Gemini subscription. Free usage remains subject to Google's current project/model limits. Presence also provides a direct link to the Google AI Studio rate-limit page.
 
 > [!CAUTION]
 > Never commit API keys to the repository or include them in screenshots, transcripts, issues, or messages.
@@ -282,6 +300,10 @@ Select the correct devices in Presence settings. In Windows, also open **Setting
 ### API-key error
 
 Confirm that the selected provider matches the key entered in Settings. Use the information button in Presence to open the provider's official API-key page.
+
+### Gemini usage or rate limit reached
+
+If Presence reports **Gemini usage limit reached**, the Google project has hit a current rate or quota limit. Try again later or open the Google AI Studio rate-limit page to review the project's active limits. Presence does not automatically enable billing or move a Free Tier project to paid usage.
 
 ### Audio export is unavailable
 
