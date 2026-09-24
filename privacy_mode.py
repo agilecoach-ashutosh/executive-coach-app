@@ -25,6 +25,7 @@ PRIVACY_NOTICE_URL = (
     "https://github.com/agilecoach-ashutosh/executive-coach-app/blob/main/PRIVACY.md"
 )
 GOOGLE_TERMS_URL = "https://ai.google.dev/gemini-api/terms"
+GOOGLE_PRICING_URL = "https://ai.google.dev/gemini-api/docs/pricing"
 GROQ_DATA_URL = "https://console.groq.com/docs/your-data"
 GROQ_DPA_URL = "https://console.groq.com/docs/legal/customer-data-processing-addendum"
 
@@ -315,9 +316,11 @@ def open_privacy_notice(self):
     else:
         provider_text = (
             "For a Gemini session, live voice/text and model responses are processed by Google Gemini under "
-            "your own API project. Google applies different data-use rules to unpaid and paid services, and its "
-            "current terms require Paid Services when an API client is made available to users in the EEA, "
-            "Switzerland, or the UK. Check your current project plan and terms before using real client information."
+            "your own API project. Google currently lists Gemini 3.8 Live Free Tier input/output as free of charge, "
+            "subject to project/model limits. Google's pricing information also says Free Tier content may be used "
+            "to improve Google products, while Paid Tier content is not used for that purpose. Its current terms "
+            "require Paid Services when an API client is made available to users in the EEA, Switzerland, or the UK. "
+            "Check your current project plan and terms before using real client information."
         )
     card(f"Cloud processing • {selected}", provider_text, base.AMBER)
 
@@ -363,6 +366,13 @@ def open_privacy_notice(self):
             links,
             "Groq DPA ↗",
             lambda: webbrowser.open(GROQ_DPA_URL),
+            compact=True,
+        ).pack(side="left", padx=(0, 6))
+    else:
+        self.button(
+            links,
+            "Gemini pricing & data use ↗",
+            lambda: webbrowser.open(GOOGLE_PRICING_URL),
             compact=True,
         ).pack(side="left", padx=(0, 6))
     self.button(
