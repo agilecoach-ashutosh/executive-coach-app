@@ -10,6 +10,7 @@ from tkinter import filedialog, messagebox
 import practice_review as review
 import privacy_mode as provider
 from review_export import export_review_docx
+from runtime_errors import classify_export_error
 from session_export import export_transcript_docx, format_elapsed
 
 base = provider.base
@@ -108,7 +109,8 @@ def export_transcript_word(self):
     try:
         export_transcript_docx(self.transcript.rows, filename)
     except Exception as exc:
-        messagebox.showerror("Export failed", str(exc), parent=parent)
+        issue = classify_export_error(exc, artifact="session transcript")
+        messagebox.showerror(issue.title, issue.message, parent=parent)
         return False
 
     self.dirty = False
@@ -143,7 +145,8 @@ def export_session_audio(self):
     try:
         engine.export_audio(filename)
     except Exception as exc:
-        messagebox.showerror("Audio export failed", str(exc), parent=parent)
+        issue = classify_export_error(exc, artifact="session audio")
+        messagebox.showerror(issue.title, issue.message, parent=parent)
         return False
 
     self.audio_exported = True
@@ -190,7 +193,8 @@ def export_coaching_review_word(self):
             list(self.transcript.rows),
         )
     except Exception as exc:
-        messagebox.showerror("Review export failed", str(exc), parent=parent)
+        issue = classify_export_error(exc, artifact="coaching review")
+        messagebox.showerror(issue.title, issue.message, parent=parent)
         return False
 
     messagebox.showinfo(
