@@ -40,6 +40,7 @@ GEMINI = "Google Gemini"
 GROQ = "Groq"
 GROQ_KEY_URL = "https://console.groq.com/keys"
 GEMINI_KEY_URL = "https://aistudio.google.com/apikey"
+GEMINI_RATE_LIMIT_URL = "https://aistudio.google.com/rate-limit?timeRange=last-28-days"
 
 
 def provider_init(self):
@@ -282,7 +283,7 @@ def provider_api_help(self):
     dialog = tk.Toplevel(parent)
     dialog.title("Connect Presence to an AI provider")
     dialog.configure(bg=base.BG)
-    dialog.geometry("650x620")
+    dialog.geometry("650x720")
     dialog.resizable(False, False)
     dialog.transient(parent)
 
@@ -296,7 +297,16 @@ def provider_api_help(self):
         base.MUTED,
     ).pack(anchor="w", padx=24, pady=(0, 14))
 
-    def key_card(title, subtitle, steps, button_text, url, accent):
+    def key_card(
+        title,
+        subtitle,
+        steps,
+        button_text,
+        url,
+        accent,
+        secondary_button_text=None,
+        secondary_url=None,
+    ):
         card = tk.Frame(
             dialog,
             bg=base.PANEL,
@@ -327,18 +337,29 @@ def provider_api_help(self):
             primary=(title == GEMINI),
             compact=True,
         ).pack(fill="x", pady=(10, 0))
+        if secondary_button_text and secondary_url:
+            self.button(
+                card,
+                secondary_button_text,
+                lambda: webbrowser.open(secondary_url),
+                compact=True,
+            ).pack(fill="x", pady=(6, 0))
 
     key_card(
         GEMINI,
-        "Gemini Live provides native realtime audio in and out.",
+        "Gemini Live provides native realtime audio. A Free Tier is available for getting started.",
         [
             "Sign in to Google AI Studio.",
             "Open the API Keys page and create a key.",
             "Copy the key and paste it into Presence → Settings.",
+            "No paid Gemini subscription is required to get started.",
+            "Free usage is subject to your Google project's current limits.",
         ],
         "Open Gemini API Keys ↗",
         GEMINI_KEY_URL,
         base.AMBER,
+        "Check Gemini quota & rate limits ↗",
+        GEMINI_RATE_LIMIT_URL,
     )
     key_card(
         GROQ,
