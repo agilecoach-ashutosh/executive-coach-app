@@ -208,6 +208,7 @@ def clear_session_data(self, parent=None):
     self.audio_exported = True
     self.engine = None
     self.level = 0
+    self._runtime_error_active = False
     self.set_session_controls(False)
     self.state.set("Ready when you are")
     self.connection_state.set("●  Ready")
