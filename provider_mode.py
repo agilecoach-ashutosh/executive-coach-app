@@ -447,6 +447,7 @@ def provider_start(self):
     self.render()
     self.muted.set(False)
     self.hold.set(False)
+    self._runtime_error_active = False
     self.state.set("Connecting…")
     self.connection_state.set("●  Connecting · Groq")
 
