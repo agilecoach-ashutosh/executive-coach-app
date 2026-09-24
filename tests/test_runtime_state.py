@@ -50,8 +50,12 @@ class RuntimeStateTests(unittest.TestCase):
         state.display_state = _Var("Connecting")
         state.display_hint = _Var("")
         state.provider = _Var("Google Gemini")
+        state.consent = _Var(True)
+        state._privacy_last_state = "Connecting…"
+        state._privacy_resetting_consent = False
         state.set_session_controls = lambda live: None
         state.render = lambda: None
+        state.poll = lambda: None
         state.after = lambda *args: None
         return state
 
