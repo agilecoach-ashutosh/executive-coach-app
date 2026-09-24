@@ -1,7 +1,8 @@
 """Windows-only setup helper for Presence Coach.
 
 Uses the checked-in Presence-Coach.ico directly and creates the Desktop shortcut
-without PowerShell, Base64 decoding, or image conversion during installation.
+with the Windows ShellLink API. This avoids the WScript.Shell automation layer,
+which can reject shortcut properties on some Windows configurations.
 """
 from __future__ import annotations
 
@@ -31,27 +32,56 @@ def _refresh_windows_icons() -> None:
 
 
 def create_desktop_shortcut(root: Path, icon_path: Path) -> Path:
+    """Create the Presence Coach desktop shortcut using the native ShellLink API."""
     try:
-        import win32com.client
+        import pythoncom
+        from win32com.shell import shell, shellcon
     except ImportError as exc:
         raise RuntimeError(
             "Windows shortcut support is missing. Run Setup.cmd again so pywin32 is installed."
         ) from exc
 
-    shell = win32com.client.Dispatch("WScript.Shell")
-    desktop = Path(shell.SpecialFolders("Desktop"))
+    target = (root / ".venv" / "Scripts" / "pythonw.exe").resolve()
+    script = (root / "session_export_mode.py").resolve()
+    if not target.exists():
+        raise FileNotFoundError(f"Python launcher is missing: {target}")
+    if not script.exists():
+        raise FileNotFoundError(f"Presence Coach entry point is missing: {script}")
+
+    desktop = Path(
+        shell.SHGetFolderPath(
+            0,
+            shellcon.CSIDL_DESKTOPDIRECTORY,
+            None,
+            shellcon.SHGFP_TYPE_CURRENT,
+        )
+    )
     shortcut_path = desktop / "Presence Coach.lnk"
 
     if shortcut_path.exists():
         shortcut_path.unlink()
 
-    shortcut = shell.CreateShortcut(str(shortcut_path))
-    shortcut.TargetPath = str((root / ".venv" / "Scripts" / "pythonw.exe").resolve())
-    shortcut.Arguments = "session_export_mode.py"
-    shortcut.WorkingDirectory = str(root.resolve())
-    shortcut.IconLocation = f"{icon_path},0"
-    shortcut.Description = "Presence Coach"
-    shortcut.Save()
+    pythoncom.CoInitialize()
+    try:
+        shortcut = pythoncom.CoCreateInstance(
+            shell.CLSID_ShellLink,
+            None,
+            pythoncom.CLSCTX_INPROC_SERVER,
+            shell.IID_IShellLink,
+        )
+        shortcut.SetPath(str(target))
+        shortcut.SetArguments(f'"{script}"')
+        shortcut.SetWorkingDirectory(str(root.resolve()))
+        shortcut.SetIconLocation(str(icon_path), 0)
+        shortcut.SetDescription("Presence Coach")
+
+        persist_file = shortcut.QueryInterface(pythoncom.IID_IPersistFile)
+        persist_file.Save(str(shortcut_path), 0)
+    finally:
+        pythoncom.CoUninitialize()
+
+    if not shortcut_path.exists():
+        raise RuntimeError("Windows reported success, but the desktop shortcut was not created.")
 
     _refresh_windows_icons()
     return shortcut_path
@@ -63,7 +93,7 @@ def main() -> int:
         icon = get_icon(root)
         shortcut = create_desktop_shortcut(root, icon)
     except Exception as exc:
-        print(f"Windows setup failed: {exc}", file=sys.stderr)
+        print(f"Desktop shortcut setup failed: {exc}", file=sys.stderr)
         return 1
 
     print(f"Using Presence icon: {icon}")
