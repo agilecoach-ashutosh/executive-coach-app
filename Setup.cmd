@@ -18,8 +18,16 @@ if errorlevel 1 goto failed
 if errorlevel 1 goto failed
 ".venv\Scripts\python.exe" -m pip install -r requirements.txt -c constraints.txt
 if errorlevel 1 goto failed
+
 ".venv\Scripts\python.exe" windows_setup.py
-if errorlevel 1 goto failed
+if errorlevel 1 (
+  echo.
+  echo WARNING: Presence Coach installed successfully, but the desktop shortcut could not be created.
+  echo You can still start Presence Coach by double-clicking Start.cmd.
+  echo.
+) else (
+  echo Desktop shortcut created successfully.
+)
 
 echo Setup complete. Use the Presence Coach desktop shortcut or Start.cmd.
 pause
