@@ -582,7 +582,8 @@ class PresenceApp(base.App):
 
         c = self.orb
         w, h = max(1, c.winfo_width()), max(1, c.winfo_height())
-        # Leave enough breathing room for the outer halo at peak animation.\n        radius = min(w, h) * .33
+        # Leave enough breathing room for the outer halo at peak animation.
+        radius = min(w, h) * .33
         shake = 0 if gentle else power * 3
         cx = w / 2 + math.sin(t * 17) * shake
         cy = h / 2 + math.cos(t * 21) * shake
