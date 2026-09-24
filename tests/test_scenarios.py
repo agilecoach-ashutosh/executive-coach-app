@@ -7,6 +7,7 @@ from scenarios import (
     SCENARIO_PACKS,
     build_coachee_prompt,
     prepare_scenario,
+    scenario_kickoff,
     scenario_matches,
 )
 
@@ -90,6 +91,25 @@ class ScenarioLibraryTests(unittest.TestCase):
         self.assertIn("more guarded, contradictory", prompt)
         self.assertIn("Active Listening", prompt)
         self.assertIn("never mention that focus", prompt)
+
+    def test_coachee_opens_with_greeting_before_revealing_topic(self):
+        scenario = COACHEE_SCENARIOS[0]
+        prompt = build_coachee_prompt(scenario)
+        kickoff = scenario_kickoff(scenario)
+
+        self.assertIn("SESSION OPENING PROTOCOL", prompt)
+        self.assertIn("Keep the presenting topic private until the coach clearly invites the agenda", prompt)
+        self.assertIn(scenario["opening"], prompt)
+        self.assertIn("brief, natural greeting", kickoff)
+        self.assertIn("wait for the coach", kickoff)
+        self.assertNotIn(scenario["opening"], kickoff)
+
+    def test_rapport_does_not_trigger_topic_reveal(self):
+        prompt = build_coachee_prompt(COACHEE_SCENARIOS[0])
+
+        self.assertIn('such as "How are you?"', prompt)
+        self.assertIn("Do not use rapport questions as an excuse to introduce the presenting topic", prompt)
+        self.assertIn("Recognize this invitation by meaning", prompt)
 
     def test_library_choices_are_stable(self):
         self.assertEqual(
