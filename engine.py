@@ -1,6 +1,7 @@
 """Gemini Live transport; Tk widgets are never accessed from this thread."""
 import asyncio
 import collections
+import contextlib
 import queue
 import threading
 import time
@@ -146,21 +147,33 @@ class LiveEngine(threading.Thread):
         try:
             async with client.aio.live.connect(model=self.model, config=config) as session:
                 self.session = session
-                with sd.RawInputStream(
-                    samplerate=16000,
-                    channels=1,
-                    dtype='int16',
-                    blocksize=640,
-                    device=self.mic,
-                    callback=self.capture,
-                ), sd.RawOutputStream(
-                    samplerate=24000,
-                    channels=1,
-                    dtype='int16',
-                    blocksize=960,
-                    device=self.speaker,
-                    callback=self.playback,
-                ):
+                with contextlib.ExitStack() as audio_stack:
+                    try:
+                        mic_stream = sd.RawInputStream(
+                            samplerate=16000,
+                            channels=1,
+                            dtype='int16',
+                            blocksize=640,
+                            device=self.mic,
+                            callback=self.capture,
+                        )
+                        audio_stack.enter_context(mic_stream)
+                    except Exception as exc:
+                        raise RuntimeError(f"MIC_DEVICE_ERROR: {exc}") from exc
+
+                    try:
+                        speaker_stream = sd.RawOutputStream(
+                            samplerate=24000,
+                            channels=1,
+                            dtype='int16',
+                            blocksize=960,
+                            device=self.speaker,
+                            callback=self.playback,
+                        )
+                        audio_stack.enter_context(speaker_stream)
+                    except Exception as exc:
+                        raise RuntimeError(f"SPEAKER_DEVICE_ERROR: {exc}") from exc
+
                     self.emit('connected')
                     tasks = [
                         asyncio.create_task(self.send_loop()),
