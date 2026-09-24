@@ -148,8 +148,9 @@ def privacy_poll(self):
     _original_poll(self)
     current = self.state.get()
 
-    # Require fresh authorization for every completed voice session.
-    if current == "Session complete" and previous != "Session complete":
+    # Require fresh authorization whenever a voice session ends, including failures.
+    terminal_states = {"Session complete", "Connection issue", "Safety support needed"}
+    if current in terminal_states and current != previous:
         self._privacy_resetting_consent = True
         try:
             self.consent.set(False)
