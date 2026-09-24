@@ -10,6 +10,7 @@ from tkinter import filedialog, messagebox
 
 import practice_mode as practice
 from reviewer import calculate_metrics, format_duration, generate_review
+from runtime_errors import classify_export_error, classify_runtime_error
 
 base = practice.base
 _original_init = base.App.__init__
@@ -447,18 +448,17 @@ def _poll_review_result(self):
         if self._review_export_button and self._review_export_button.winfo_exists():
             self._review_export_button.configure(state="normal")
     else:
+        provider_var = getattr(self, "provider", None)
+        provider_name = provider_var.get() if provider_var is not None else "Google Gemini"
+        issue = classify_runtime_error(value, provider_name, context="review")
         _set_review_output(
             self,
-            "Review generation failed. Your transcript is still available.\n\n" + value,
+            "Review generation failed. Your transcript is still available.\n\n" + issue.message,
         )
         parent = self
         if self._review_dialog and self._review_dialog.winfo_exists():
             parent = self._review_dialog
-        messagebox.showerror(
-            "Review generation failed",
-            value + "\n\nCheck API key, quota, internet access, and model availability.",
-            parent=parent,
-        )
+        messagebox.showerror(issue.title, issue.message, parent=parent)
 
 
 def export_coaching_review(self):
@@ -487,7 +487,8 @@ def export_coaching_review(self):
     try:
         Path(filename).write_text(header + self.practice_review_text + "\n", encoding="utf-8")
     except OSError as exc:
-        messagebox.showerror("Export failed", str(exc), parent=parent)
+        issue = classify_export_error(exc, artifact="coaching review")
+        messagebox.showerror(issue.title, issue.message, parent=parent)
 
 
 base.App.__init__ = review_init
