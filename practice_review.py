@@ -110,8 +110,9 @@ def review_animate(self):
     if live and self.practice_session_started_at is None:
         self.practice_session_started_at = time.monotonic()
 
+    session_state = self.state.get()
     if (
-        self.state.get() == "Session complete"
+        session_state in ("Session complete", "Connection issue")
         and self.transcript.rows
         and not self.practice_review_shown
     ):
@@ -119,7 +120,11 @@ def review_animate(self):
         self.practice_review_shown = True
         if hasattr(self, "review_button"):
             self.review_button.configure(state="normal")
-        self.after(300, self.show_session_review)
+        # Completed practice sessions open the review automatically. If the provider
+        # disconnected unexpectedly, keep the partial transcript review available
+        # without stacking another dialog on top of the connection error.
+        if session_state == "Session complete":
+            self.after(300, self.show_session_review)
 
 
 def _metric_row(self, parent, label, value, note=None):
