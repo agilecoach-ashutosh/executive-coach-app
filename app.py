@@ -12,6 +12,7 @@ import sounddevice as sd
 
 from coaching import IMMINENT_DANGER_RESPONSE, Transcript, detects_imminent_danger
 from engine import LiveEngine
+from runtime_errors import classify_runtime_error
 
 BG = '#050810'
 PANEL = '#0a111c'
@@ -46,20 +47,6 @@ Keep your key private."""
 GEMINI_RATE_LIMIT_URL = "https://aistudio.google.com/rate-limit?timeRange=last-28-days"
 
 
-def _is_usage_limit_error(detail):
-    text = (detail or "").lower()
-    markers = (
-        "429",
-        "resource_exhausted",
-        "rate_limit_exceeded",
-        "quota_exceeded",
-        "rate limit",
-        "quota exceeded",
-        "too many requests",
-    )
-    return any(marker in text for marker in markers)
-
-
 class App(tk.Tk):
     def __init__(self):
         super().__init__()
@@ -76,6 +63,7 @@ class App(tk.Tk):
         self.conversation_visible = True
         self.focused = False
         self._safety_alerted = False
+        self._runtime_error_active = False
         self.audio_exported = True
 
         self.display_state = tk.StringVar(value='Ready when you are')
@@ -753,6 +741,7 @@ class App(tk.Tk):
         self.render()
         self.muted.set(False)
         self.hold.set(False)
+        self._runtime_error_active = False
         self.state.set('Connecting…')
         self.connection_state.set('●  Connecting')
         self.display_state.set('Connecting')
@@ -852,14 +841,23 @@ class App(tk.Tk):
             elif kind == 'status':
                 self.state.set(value)
             elif kind == 'connected':
+                self._runtime_error_active = False
                 self.state.set('Listening')
                 self.connection_state.set('●  Live')
                 self.set_session_controls(True)
             elif kind == 'disconnected':
-                self.state.set(
-                    'Safety support needed' if self._safety_alerted else 'Session complete'
-                )
-                self.connection_state.set('●  Ready')
+                if self._runtime_error_active:
+                    self.state.set('Connection issue')
+                    self.connection_state.set('●  Needs attention')
+                    self.display_state.set('Connection issue')
+                    self.display_hint.set(
+                        'Your transcript is safe. Check the message and reconnect when ready.'
+                    )
+                else:
+                    self.state.set(
+                        'Safety support needed' if self._safety_alerted else 'Session complete'
+                    )
+                    self.connection_state.set('●  Ready')
                 self.set_session_controls(False)
                 self.level = 0
             elif kind == 'notice':
@@ -871,27 +869,17 @@ class App(tk.Tk):
                 self._show_safety_alert(value)
                 changed = True
             elif kind == 'error':
+                self._runtime_error_active = True
+                self.state.set('Connection issue')
                 self.connection_state.set('●  Needs attention')
+                self.display_state.set('Connection issue')
+                self.display_hint.set(
+                    'Your transcript is safe. Check the message and reconnect when ready.'
+                )
                 provider_var = getattr(self, 'provider', None)
                 provider_name = provider_var.get() if provider_var is not None else 'Google Gemini'
-                if provider_name == 'Google Gemini' and _is_usage_limit_error(value):
-                    messagebox.showerror(
-                        'Gemini usage limit reached',
-                        (
-                            'Your Google Gemini project has reached its current usage or rate limit.\n\n'
-                            'Please try again later or check your quota in Google AI Studio. '
-                            'If you are using the Free Tier, Presence Coach will not automatically '
-                            'enable billing or switch your project to paid usage.\n\n'
-                            'Your transcript is still available.'
-                        ),
-                    )
-                else:
-                    messagebox.showerror(
-                        'Connection or audio issue',
-                        value
-                        + '\n\nCheck API key, quota, model access, and audio devices. '
-                          'Your transcript is still available.',
-                    )
+                issue = classify_runtime_error(value, provider_name, context='session')
+                messagebox.showerror(issue.title, issue.message)
 
         if changed:
             self.render()
