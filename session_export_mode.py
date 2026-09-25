@@ -170,7 +170,6 @@ def export_session_audio(self):
         base.MUTED,
     ).pack(anchor="w", padx=22, pady=(0, 18))
     progress.update_idletasks()
-    progress.grab_set()
 
     self._audio_export_in_progress = True
     button = getattr(self, "_review_audio_button", None)
