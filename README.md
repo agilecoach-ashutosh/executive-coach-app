@@ -115,7 +115,7 @@ Text to speech
 Speaker or headphones
 ```
 
-Provider-controlled models, quotas, availability, pricing, and supported languages may change.
+Provider-controlled models, quotas, availability, pricing, and supported languages may change. Presence keeps Groq voice turns concise and paces multi-part Orpheus speech requests; if TTS reaches a provider rate limit, the text reply remains available and the session stays open.
 
 ## Run from source
 
@@ -292,6 +292,7 @@ Presence uses a local-first session model, but the selected cloud AI provider st
 - Presence does not automatically save the session recording to disk.
 - **Privacy & data use** in the app explains the current data flow and includes **Discard current session data** to clear the in-memory transcript/audio after a session.
 - Provider authorization is session-scoped. It resets after a completed session and when the selected provider changes. Withdrawing it during a live session ends the connection.
+- The AI-provider selector is locked while a session is live, preventing the visible provider/consent state from drifting away from the provider that owns the connection.
 - Exported Word and MP3 files are not encrypted by Presence and should be stored appropriately.
 - Saved API keys use Windows Credential Manager or macOS Keychain through the operating-system keyring.
 - Presence is intended for adults aged **18 or older**.
@@ -309,7 +310,7 @@ See **[PRIVACY.md](PRIVACY.md)** for the full privacy and data-processing notice
 | --- | --- |
 | `app.py` | Base Tkinter interface |
 | `engine.py` | Gemini Live transport and session-audio capture |
-| `launch.py` | Performance-optimized orb and dialog layer |
+| `launch.py` | Backward-compatible alias to the production application entry point |
 | `practice_mode.py` | Role selection and simulated-coachee mode |
 | `practice_review.py` | Post-session metrics and review interface |
 | `provider_mode.py` | Gemini and Groq provider selection |
@@ -320,6 +321,19 @@ See **[PRIVACY.md](PRIVACY.md)** for the full privacy and data-processing notice
 | `coaching.py` | Coach behaviour instructions and transcript model |
 | `scenarios.py` | Simulated professional-coachee scenarios |
 | `reviewer.py` | Metrics and developmental-review prompt |
+
+The production composition has one explicit runtime chain:
+
+```text
+app.py
+  → practice_mode.py
+  → practice_review.py
+  → provider_mode.py
+  → privacy_mode.py
+  → session_export_mode.py
+```
+
+`session_export_mode.py` is the supported entry point. `launch.py` is retained only so older launch commands keep working without maintaining a second UI implementation.
 
 ## Testing
 
