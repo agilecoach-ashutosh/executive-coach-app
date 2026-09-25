@@ -51,6 +51,7 @@ if [ -z "$PYTHON_BIN" ]; then
 fi
 
 printf "Using %s\n" "$PYTHON_BIN"
+chmod +x "$SCRIPT_DIR/Start-Mac.command" "$SCRIPT_DIR/Uninstall-Mac.command" 2>/dev/null || true
 "$PYTHON_BIN" -m venv .venv || fail "Could not create the local Python environment."
 
 VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python"
@@ -63,5 +64,6 @@ VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python"
   fail "An audio or credential dependency could not load. If the error mentions PortAudio, install it with Homebrew using: brew install portaudio"
 
 printf "\nSetup complete. Double-click Start-Mac.command to open Presence Coach.\n"
+printf "To remove the local installation later, double-click Uninstall-Mac.command.\n"
 printf "macOS will ask for microphone access the first time a session starts.\n"
 pause_before_exit
