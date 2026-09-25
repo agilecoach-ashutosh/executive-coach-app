@@ -12,7 +12,7 @@ from __future__ import annotations
 import queue
 import tkinter as tk
 import webbrowser
-from tkinter import messagebox
+from tkinter import messagebox, ttk
 
 import provider_mode as provider
 
@@ -261,7 +261,12 @@ def open_privacy_notice(self):
     ).pack(anchor="w", padx=26, pady=(0, 12))
 
     canvas = tk.Canvas(dialog, bg=base.BG, highlightthickness=0, bd=0)
-    scrollbar = tk.Scrollbar(dialog, orient="vertical", command=canvas.yview)
+    scrollbar = ttk.Scrollbar(
+        dialog,
+        orient="vertical",
+        command=canvas.yview,
+        style="Presence.Vertical.TScrollbar",
+    )
     canvas.configure(yscrollcommand=scrollbar.set)
     scrollbar.pack(side="right", fill="y", pady=(0, 70))
     canvas.pack(fill="both", expand=True, padx=(26, 8), pady=(0, 8))
@@ -277,10 +282,16 @@ def open_privacy_notice(self):
 
     content.bind("<Configure>", sync)
     canvas.bind("<Configure>", fit_width)
-    canvas.bind(
-        "<MouseWheel>",
-        lambda event: canvas.yview_scroll(int(-1 * (event.delta / 120)), "units"),
-    )
+
+    def wheel(event):
+        units = base.mousewheel_units(event)
+        if units:
+            canvas.yview_scroll(units, "units")
+            return "break"
+        return None
+
+    for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+        dialog.bind(sequence, wheel, add="+")
 
     def card(title, body, accent=None):
         frame = tk.Frame(
