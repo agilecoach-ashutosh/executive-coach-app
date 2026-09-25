@@ -1,7 +1,9 @@
 """Elapsed transcript + Word/MP3 export layer for Presence Coach."""
 from __future__ import annotations
 
+import queue
 import sys
+import threading
 import time
 import tkinter as tk
 from pathlib import Path
@@ -17,6 +19,7 @@ base = provider.base
 _original_app_init = base.App.__init__
 _original_transcript = base.Transcript
 _original_show_session_review = base.App.show_session_review
+_original_confirm_unsaved = base.App.confirm_unsaved
 _original_make_sidebar = review._make_scrollable_review_sidebar
 
 
@@ -35,6 +38,7 @@ def _branded_init(self):
             pass
 
     _original_app_init(self)
+    self._audio_export_in_progress = False
 
     try:
         icon = _resource_path("Presence-Coach.ico")
@@ -125,6 +129,13 @@ def export_transcript_word(self):
 def export_session_audio(self):
     engine = getattr(self, "engine", None)
     parent = _review_parent(self)
+    if getattr(self, "_audio_export_in_progress", False):
+        messagebox.showinfo(
+            "Audio export",
+            "An audio export is already in progress.",
+            parent=parent,
+        )
+        return False
     if not engine or not hasattr(engine, "has_audio") or not engine.has_audio():
         messagebox.showinfo(
             "Session audio",
@@ -142,28 +153,92 @@ def export_session_audio(self):
     if not filename:
         return False
 
-    try:
-        engine.export_audio(filename)
-    except Exception as exc:
-        issue = classify_export_error(exc, artifact="session audio")
-        messagebox.showerror(issue.title, issue.message, parent=parent)
-        return False
+    progress = tk.Toplevel(parent)
+    progress.title("Exporting session audio")
+    progress.configure(bg=base.BG)
+    progress.geometry("430x150")
+    progress.resizable(False, False)
+    progress.transient(parent)
+    progress.protocol("WM_DELETE_WINDOW", lambda: None)
+    self.label(progress, "Exporting session audio…", 14, base.INK, "bold").pack(
+        anchor="w", padx=22, pady=(22, 6)
+    )
+    self.label(
+        progress,
+        "Long recordings are encoded in the background. You can keep Presence open while this finishes.",
+        9,
+        base.MUTED,
+    ).pack(anchor="w", padx=22, pady=(0, 18))
+    progress.update_idletasks()
+    progress.grab_set()
 
-    self.audio_exported = True
-    truncated = bool(
-        hasattr(engine, "audio_truncated") and engine.audio_truncated()
-    )
-    messagebox.showinfo(
-        "Audio exported",
-        (
-            "The available coaching-session audio was saved as an MP3. Presence stopped "
-            "retaining additional audio after its 90-minute/192 MB safety limit."
-            if truncated
-            else "The coaching conversation was saved as an MP3 for reflection."
-        ),
-        parent=parent,
-    )
+    self._audio_export_in_progress = True
+    button = getattr(self, "_review_audio_button", None)
+    if button and button.winfo_exists():
+        button.configure(state="disabled", text="Exporting audio…")
+
+    result_queue = queue.Queue(maxsize=1)
+
+    def worker():
+        try:
+            engine.export_audio(filename)
+        except Exception as exc:
+            result_queue.put(("error", exc))
+        else:
+            result_queue.put(("ok", None))
+
+    def finish_export(status, error):
+        if progress.winfo_exists():
+            progress.destroy()
+        self._audio_export_in_progress = False
+
+        current_button = getattr(self, "_review_audio_button", None)
+        if current_button and current_button.winfo_exists():
+            current_button.configure(state="normal", text="Export session audio (.mp3)")
+
+        if status == "error":
+            issue = classify_export_error(error, artifact="session audio")
+            messagebox.showerror(issue.title, issue.message, parent=_review_parent(self))
+            return
+
+        self.audio_exported = True
+        truncated = bool(
+            hasattr(engine, "audio_truncated") and engine.audio_truncated()
+        )
+        messagebox.showinfo(
+            "Audio exported",
+            (
+                "The available coaching-session audio was saved as an MP3. Presence stopped "
+                "retaining additional audio after its 90-minute/192 MB safety limit."
+                if truncated
+                else "The coaching conversation was saved as an MP3 for reflection."
+            ),
+            parent=_review_parent(self),
+        )
+
+    def poll_export():
+        try:
+            status, error = result_queue.get_nowait()
+        except queue.Empty:
+            if progress.winfo_exists():
+                self.after(100, poll_export)
+            return
+        finish_export(status, error)
+
+    threading.Thread(target=worker, daemon=True).start()
+    self.after(100, poll_export)
     return True
+
+
+def confirm_unsaved_with_export_guard(self):
+    if getattr(self, "_audio_export_in_progress", False):
+        messagebox.showinfo(
+            "Audio export in progress",
+            "Wait for the session-audio export to finish before closing, changing mode, or starting another session.",
+            parent=_review_parent(self),
+        )
+        return False
+    return _original_confirm_unsaved(self)
 
 
 def export_coaching_review_word(self):
@@ -253,6 +328,7 @@ base.App.__init__ = _branded_init
 base.App.save = export_transcript_word
 base.App.export_transcript_word = export_transcript_word
 base.App.export_session_audio = export_session_audio
+base.App.confirm_unsaved = confirm_unsaved_with_export_guard
 base.App.export_coaching_review = export_coaching_review_word
 base.App.show_session_review = show_session_review_with_exports
 
