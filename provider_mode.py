@@ -26,6 +26,7 @@ from groq_engine import (
 from reviewer import (
     FAST_GROQ_REVIEW_MODEL,
     build_review_prompt,
+    should_try_review_fallback,
     structured_model_output_to_text,
 )
 from scenarios import build_coachee_prompt, scenario_kickoff
@@ -226,11 +227,8 @@ def _wire_provider_consent(self):
 def _update_provider_ui(self):
     selected = self.provider.get() if hasattr(self, "provider") else GEMINI
     engine = getattr(self, "engine", None)
-    live = bool(
-        engine
-        and engine.is_alive()
-        and not getattr(engine, "stopping", threading.Event()).is_set()
-    )
+    stopping = getattr(engine, "stopping", None) if engine else None
+    live = bool(engine and engine.is_alive() and not (stopping and stopping.is_set()))
     active = getattr(self, "_active_provider", None)
     if live and active and selected != active:
         # Provider authorization is session-scoped. Never let the visible provider
@@ -477,7 +475,8 @@ def provider_start(self):
     english_voice_constraint = (
         "\n\nPROVIDER VOICE CONSTRAINT\n"
         "This Groq session currently uses English-only Orpheus TTS. "
-        "Understand multilingual user speech when possible, but produce spoken responses in natural English."
+        "Understand multilingual user speech when possible, but produce spoken responses in natural English. "
+        "Keep spoken replies concise: usually one reflection or one question, ideally under 180 characters."
     )
 
     if getattr(self, "practice_mode", "coachee") == "coach":
@@ -598,6 +597,8 @@ def provider_generate_review(self):
                 return
             except Exception as exc:
                 errors.append(f"{model}: {exc}")
+                if not should_try_review_fallback(exc, GROQ):
+                    break
 
         self._review_queue.put((
             generation,
