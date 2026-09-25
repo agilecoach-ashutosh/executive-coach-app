@@ -27,6 +27,10 @@ DEFAULT_STT_MODEL = "whisper-large-v3-turbo"
 DEFAULT_TTS_MODEL = "canopylabs/orpheus-v1-english"
 DEFAULT_VOICE = "troy"
 REQUEST_TIMEOUT_SECONDS = 30.0
+# The Groq Free plan currently allows 10 Orpheus TTS requests/minute. Pacing
+# requests avoids turning a normal coaching exchange into a session-ending 429.
+TTS_MIN_INTERVAL_SECONDS = 6.1
+TTS_RATE_LIMIT_RETRIES = 1
 
 
 def split_for_tts(text: str, limit: int = 190) -> list[str]:
@@ -124,6 +128,8 @@ class GroqEngine(threading.Thread):
         self.current_audio = bytearray()
         self.stopping = threading.Event()
         self.interrupting = threading.Event()
+        self._interrupt_token = 0
+        self._next_tts_at = 0.0
         self.muted = False
         self.hold = False
         self.generating = False
@@ -139,6 +145,9 @@ class GroqEngine(threading.Thread):
 
     def command(self, name, value=None):
         if name == "interrupt":
+            # Incrementing a token lets blocking STT/LLM/TTS calls notice that an
+            # interrupt happened while they were waiting for the provider.
+            self._interrupt_token += 1
             self.interrupting.set()
         self.commands.put((name, value))
 
@@ -284,10 +293,14 @@ class GroqEngine(threading.Thread):
     def _respond_to_audio(self, pcm: bytes):
         if self.stopping.is_set():
             return
+        turn_token = self._interrupt_token
+        self.interrupting.clear()
         self.generating = True
         self.emit("status", "Transcribing")
         try:
             text = self._transcribe(pcm)
+            if self.stopping.is_set():
+                return
             if not text:
                 self.emit("status", "Listening")
                 return
@@ -297,7 +310,11 @@ class GroqEngine(threading.Thread):
                 self.emit("safety", IMMINENT_DANGER_RESPONSE)
                 self.stop()
                 return
-            self._generate_and_speak(text)
+            if self._interrupt_token != turn_token:
+                self.interrupting.clear()
+                self.emit("status", "Microphone muted" if self.muted else "Listening")
+                return
+            self._generate_and_speak(text, interrupt_token=turn_token)
         finally:
             self.generating = False
             self._drain_audio_queue()
@@ -305,6 +322,8 @@ class GroqEngine(threading.Thread):
     def _respond_to_text(self, text: str, visible_input: bool):
         if self.stopping.is_set():
             return
+        turn_token = self._interrupt_token
+        self.interrupting.clear()
         self.generating = True
         try:
             if visible_input:
@@ -314,7 +333,11 @@ class GroqEngine(threading.Thread):
                     self.emit("safety", IMMINENT_DANGER_RESPONSE)
                     self.stop()
                     return
-            self._generate_and_speak(text, keep_user=visible_input)
+            self._generate_and_speak(
+                text,
+                keep_user=visible_input,
+                interrupt_token=turn_token,
+            )
         finally:
             self.generating = False
             self._drain_audio_queue()
@@ -329,7 +352,17 @@ class GroqEngine(threading.Thread):
         )
         return (getattr(result, "text", "") or "").strip()
 
-    def _generate_and_speak(self, user_text: str, keep_user: bool = True):
+    def _generate_and_speak(
+        self,
+        user_text: str,
+        keep_user: bool = True,
+        interrupt_token: int | None = None,
+    ):
+        if interrupt_token is None:
+            interrupt_token = self._interrupt_token
+        if self.stopping.is_set() or self._interrupt_token != interrupt_token:
+            return
+
         self.emit("status", self.response_status)
         request_messages = list(self.messages)
         request_messages.append({"role": "user", "content": user_text})
@@ -337,8 +370,18 @@ class GroqEngine(threading.Thread):
             model=self.model,
             messages=request_messages,
             temperature=.6,
-            max_completion_tokens=900,
+            max_completion_tokens=220,
         )
+
+        # The provider call above is blocking. Re-check user intent before adding
+        # anything to history/transcript or beginning TTS.
+        if self.stopping.is_set():
+            return
+        if self._interrupt_token != interrupt_token:
+            self.interrupting.clear()
+            self.emit("status", "Microphone muted" if self.muted else "Listening")
+            return
+
         reply = (response.choices[0].message.content or "").strip()
         if not reply:
             self.emit("status", "Listening")
@@ -351,13 +394,14 @@ class GroqEngine(threading.Thread):
 
         self.emit("boundary")
         self.emit(self.output_role, reply)
-        self.interrupting.clear()
         interrupted = False
         for chunk in split_for_tts(reply):
-            if self.stopping.is_set() or self.interrupting.is_set():
+            if self.stopping.is_set() or self._interrupt_token != interrupt_token:
                 interrupted = True
                 break
-            self._speak_chunk(chunk)
+            if not self._speak_chunk(chunk, interrupt_token):
+                interrupted = self._interrupt_token != interrupt_token
+                break
 
         self.output_level = 0.0
         self.playback_until = 0.0
@@ -367,8 +411,9 @@ class GroqEngine(threading.Thread):
                 "notice",
                 f"{self.output_role} response was interrupted; its transcript may include words not played.",
             )
-        self.interrupting.clear()
-        self.emit("status", "Microphone muted" if self.muted else "Listening")
+        if self._interrupt_token == interrupt_token:
+            self.interrupting.clear()
+            self.emit("status", "Microphone muted" if self.muted else "Listening")
 
     def _trim_history(self):
         if len(self.messages) <= 42:
@@ -376,19 +421,70 @@ class GroqEngine(threading.Thread):
         system = self.messages[0]
         self.messages = [system] + self.messages[-40:]
 
-    def _speak_chunk(self, text: str):
-        if not text:
-            return
-        self.emit("status", "Speaking")
-        response = self.client.audio.speech.create(
-            model=self.tts_model,
-            voice=self.voice,
-            input=text,
-            response_format="wav",
+    @staticmethod
+    def _is_rate_limit_error(exc: Exception) -> bool:
+        status = getattr(exc, "status_code", None)
+        if status == 429:
+            return True
+        return any(
+            marker in str(exc).lower()
+            for marker in ("429", "rate limit", "too many requests", "rate_limit")
         )
-        self._play_wav_bytes(response.read())
 
-    def _play_wav_bytes(self, wav_bytes: bytes):
+    def _wait_for_tts_slot(self, interrupt_token: int) -> bool:
+        while not self.stopping.is_set() and self._interrupt_token == interrupt_token:
+            delay = self._next_tts_at - time.monotonic()
+            if delay <= 0:
+                self._next_tts_at = time.monotonic() + TTS_MIN_INTERVAL_SECONDS
+                return True
+            time.sleep(min(.1, delay))
+        return False
+
+    def _speak_chunk(self, text: str, interrupt_token: int | None = None) -> bool:
+        if not text:
+            return True
+        if interrupt_token is None:
+            interrupt_token = self._interrupt_token
+
+        for attempt in range(TTS_RATE_LIMIT_RETRIES + 1):
+            if not self._wait_for_tts_slot(interrupt_token):
+                return False
+
+            self.emit("status", "Speaking")
+            try:
+                response = self.client.audio.speech.create(
+                    model=self.tts_model,
+                    voice=self.voice,
+                    input=text,
+                    response_format="wav",
+                )
+            except Exception as exc:
+                if self._is_rate_limit_error(exc):
+                    if attempt < TTS_RATE_LIMIT_RETRIES:
+                        self.emit(
+                            "status",
+                            "Voice service is pacing this response",
+                        )
+                        continue
+                    self.emit(
+                        "notice",
+                        "Groq voice generation hit its current rate limit. "
+                        "The response is available in the conversation panel; "
+                        "the coaching session can continue.",
+                    )
+                    return False
+                raise
+
+            if self.stopping.is_set() or self._interrupt_token != interrupt_token:
+                return False
+            self._play_wav_bytes(response.read(), interrupt_token)
+            return not self.stopping.is_set() and self._interrupt_token == interrupt_token
+
+        return False
+
+    def _play_wav_bytes(self, wav_bytes: bytes, interrupt_token: int | None = None):
+        if interrupt_token is None:
+            interrupt_token = self._interrupt_token
         with wave.open(io.BytesIO(wav_bytes), "rb") as wav:
             channels = wav.getnchannels()
             sample_width = wav.getsampwidth()
@@ -411,7 +507,10 @@ class GroqEngine(threading.Thread):
                 except Exception as exc:
                     raise RuntimeError(f"SPEAKER_DEVICE_ERROR: {exc}") from exc
 
-                while not self.stopping.is_set() and not self.interrupting.is_set():
+                while (
+                    not self.stopping.is_set()
+                    and self._interrupt_token == interrupt_token
+                ):
                     data = wav.readframes(960)
                     if not data:
                         break
