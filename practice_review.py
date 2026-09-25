@@ -198,16 +198,27 @@ def _make_scrollable_review_sidebar(self, parent):
     canvas.bind("<Configure>", fit_width)
 
     def wheel(event):
+        # Bind at the dialog level so wheel events over labels, radio buttons,
+        # export controls, and other sidebar children still reach the canvas.
+        widget = getattr(event, "widget", None)
+        inside_sidebar = False
+        while widget is not None:
+            if widget is shell:
+                inside_sidebar = True
+                break
+            widget = getattr(widget, "master", None)
+        if not inside_sidebar:
+            return None
+
         units = base.mousewheel_units(event)
         if units:
             canvas.yview_scroll(units, "units")
             return "break"
         return None
 
+    toplevel = shell.winfo_toplevel()
     for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
-        canvas.bind(sequence, wheel)
-        content.bind(sequence, wheel)
-        scrollbar.bind(sequence, wheel)
+        toplevel.bind(sequence, wheel, add="+")
 
     return content
 
