@@ -6,7 +6,7 @@ import threading
 import time
 import tkinter as tk
 from pathlib import Path
-from tkinter import filedialog, messagebox
+from tkinter import filedialog, messagebox, ttk
 
 import practice_mode as practice
 from reviewer import calculate_metrics, format_duration, generate_review
@@ -174,7 +174,12 @@ def _make_scrollable_review_sidebar(self, parent):
         bd=0,
         width=289,
     )
-    scrollbar = tk.Scrollbar(shell, orient="vertical", command=canvas.yview)
+    scrollbar = ttk.Scrollbar(
+        shell,
+        orient="vertical",
+        command=canvas.yview,
+        style="Presence.Vertical.TScrollbar",
+    )
     canvas.configure(yscrollcommand=scrollbar.set)
     scrollbar.pack(side="right", fill="y")
     canvas.pack(side="left", fill="both", expand=True)
@@ -192,12 +197,17 @@ def _make_scrollable_review_sidebar(self, parent):
     content.bind("<Configure>", sync_scrollregion)
     canvas.bind("<Configure>", fit_width)
 
-    # Mouse wheel works when the pointer is over the sidebar itself. The visible
-    # scrollbar remains available at all times for child widgets and high DPI setups.
-    canvas.bind(
-        "<MouseWheel>",
-        lambda event: canvas.yview_scroll(int(-1 * (event.delta / 120)), "units"),
-    )
+    def wheel(event):
+        units = base.mousewheel_units(event)
+        if units:
+            canvas.yview_scroll(units, "units")
+            return "break"
+        return None
+
+    for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+        canvas.bind(sequence, wheel)
+        content.bind(sequence, wheel)
+        scrollbar.bind(sequence, wheel)
 
     return content
 
@@ -333,7 +343,11 @@ def show_session_review(self):
 
     text_wrap = tk.Frame(right, bg=base.PANEL)
     text_wrap.pack(fill="both", expand=True, padx=10, pady=(0, 10))
-    scroll = tk.Scrollbar(text_wrap)
+    scroll = ttk.Scrollbar(
+        text_wrap,
+        orient="vertical",
+        style="Presence.Vertical.TScrollbar",
+    )
     scroll.pack(side="right", fill="y")
     output = tk.Text(
         text_wrap,
@@ -350,6 +364,18 @@ def show_session_review(self):
     )
     output.pack(fill="both", expand=True)
     scroll.configure(command=output.yview)
+
+    def scroll_output(event):
+        units = base.mousewheel_units(event)
+        if units:
+            output.yview_scroll(units, "units")
+            return "break"
+        return None
+
+    for sequence in ("<MouseWheel>", "<Button-4>", "<Button-5>"):
+        output.bind(sequence, scroll_output)
+        scroll.bind(sequence, scroll_output)
+
     self._review_output = output
 
     if self.practice_review_text:

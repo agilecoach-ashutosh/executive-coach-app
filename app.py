@@ -1,6 +1,7 @@
 """Presence Coach desktop application. Run with Python 3.12+."""
 import math
 import queue
+import sys
 import time
 import tkinter as tk
 import webbrowser
@@ -31,6 +32,28 @@ FILAMENT_COUNT = 8
 FILAMENT_STEPS = 40
 ANIMATION_DELAY_MS = 50
 REDUCED_MOTION_DELAY_MS = 100
+
+
+def mousewheel_units(event):
+    """Return one cross-platform scroll step for a Tk mouse-wheel event."""
+    delta = getattr(event, 'delta', 0)
+    if delta:
+        # macOS commonly reports small deltas (for example +/-1) from a
+        # mouse wheel or trackpad, while Windows commonly reports +/-120.
+        if sys.platform == 'darwin':
+            return -1 if delta > 0 else 1
+        steps = int(-delta / 120)
+        if steps:
+            return steps
+        return -1 if delta > 0 else 1
+
+    # X11/Linux uses button events instead of MouseWheel.
+    button = getattr(event, 'num', None)
+    if button == 4:
+        return -1
+    if button == 5:
+        return 1
+    return 0
 
 
 API_HELP = """GET YOUR GEMINI API KEY
@@ -137,7 +160,44 @@ class App(tk.Tk):
             troughcolor=PANEL,
             bordercolor=PANEL,
             arrowcolor=MUTED,
+            width=16,
+            arrowsize=14,
         )
+
+        # Use themed buttons rather than native tk.Button widgets. On macOS,
+        # Aqua can ignore tk.Button background colours, which made the dark
+        # interface render as white buttons with low-contrast text.
+        button_specs = (
+            ('Presence.Primary.TButton', AMBER, BG, '#ffd094', 10, (15, 10)),
+            ('Presence.PrimaryCompact.TButton', AMBER, BG, '#ffd094', 9, (10, 7)),
+            ('Presence.Secondary.TButton', SURFACE_2, INK, '#172a40', 10, (15, 10)),
+            ('Presence.SecondaryCompact.TButton', SURFACE_2, INK, '#172a40', 9, (10, 7)),
+            ('Presence.Danger.TButton', SURFACE_2, DANGER, '#172a40', 10, (15, 10)),
+            ('Presence.DangerCompact.TButton', SURFACE_2, DANGER, '#172a40', 9, (10, 7)),
+        )
+        for name, background, foreground, active, size, padding in button_specs:
+            style.configure(
+                name,
+                background=background,
+                foreground=foreground,
+                bordercolor=BORDER,
+                lightcolor=background,
+                darkcolor=background,
+                relief='flat',
+                padding=padding,
+                font=('Segoe UI', size, 'bold'),
+                focusthickness=1,
+                focuscolor=AMBER_SOFT,
+            )
+            style.map(
+                name,
+                background=[
+                    ('disabled', SURFACE_2),
+                    ('pressed', active),
+                    ('active', active),
+                ],
+                foreground=[('disabled', '#526277')],
+            )
 
     def label(self, parent, text, size=11, color=INK, weight='normal'):
         return tk.Label(
@@ -149,25 +209,20 @@ class App(tk.Tk):
         )
 
     def button(self, parent, text, command, primary=False, compact=False, danger=False):
-        bg = AMBER if primary else SURFACE_2
-        fg = BG if primary else (DANGER if danger else INK)
-        active = '#ffd094' if primary else '#172a40'
-        return tk.Button(
+        if primary:
+            style_name = 'Presence.PrimaryCompact.TButton' if compact else 'Presence.Primary.TButton'
+        elif danger:
+            style_name = 'Presence.DangerCompact.TButton' if compact else 'Presence.Danger.TButton'
+        else:
+            style_name = 'Presence.SecondaryCompact.TButton' if compact else 'Presence.Secondary.TButton'
+
+        return ttk.Button(
             parent,
             text=text,
             command=command,
-            font=('Segoe UI', 9 if compact else 10, 'bold'),
-            bg=bg,
-            fg=fg,
-            activebackground=active,
-            activeforeground=BG if primary else INK,
-            disabledforeground='#526277',
-            relief='flat',
-            borderwidth=0,
-            highlightthickness=0,
-            padx=10 if compact else 15,
-            pady=7 if compact else 10,
+            style=style_name,
             cursor='hand2',
+            takefocus=True,
         )
 
     def make_ui(self):
@@ -363,6 +418,18 @@ class App(tk.Tk):
         scrollbar.pack(side='right', fill='y')
         self.log.configure(yscrollcommand=scrollbar.set)
         self.log.pack(fill='both', expand=True)
+
+        def scroll_conversation(event):
+            units = mousewheel_units(event)
+            if units:
+                self.log.yview_scroll(units, 'units')
+                return 'break'
+            return None
+
+        for sequence in ('<MouseWheel>', '<Button-4>', '<Button-5>'):
+            self.log.bind(sequence, scroll_conversation)
+            scrollbar.bind(sequence, scroll_conversation)
+
         self.log.tag_configure('Coach', foreground=AMBER, font=('Segoe UI', 8, 'bold'))
         self.log.tag_configure('Coachee', foreground=CYAN, font=('Segoe UI', 8, 'bold'))
         self.log.tag_configure('Session note', foreground=MUTED, font=('Segoe UI', 8, 'italic'))
@@ -448,6 +515,18 @@ class App(tk.Tk):
         window = canvas.create_window((0, 0), window=content, anchor='nw')
         canvas.bind('<Configure>', lambda e: canvas.itemconfigure(window, width=e.width))
         content.bind('<Configure>', lambda _: canvas.configure(scrollregion=canvas.bbox('all')))
+
+        def scroll_settings(event):
+            units = mousewheel_units(event)
+            if units:
+                canvas.yview_scroll(units, 'units')
+                return 'break'
+            return None
+
+        # A Toplevel bindtag receives wheel events from its child controls, so
+        # settings can scroll even while the pointer is over labels/entries.
+        for sequence in ('<MouseWheel>', '<Button-4>', '<Button-5>'):
+            self.settings.bind(sequence, scroll_settings, add='+')
 
         connection = tk.Frame(
             content,

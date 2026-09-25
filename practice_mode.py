@@ -339,7 +339,12 @@ def open_scenario_chooser(self, role_dialog=None):
     wrap.pack(fill='both', expand=True, padx=20, pady=(0, 18))
 
     canvas = tk.Canvas(wrap, bg=base.BG, highlightthickness=0)
-    scrollbar = tk.Scrollbar(wrap, orient='vertical', command=canvas.yview)
+    scrollbar = ttk.Scrollbar(
+        wrap,
+        orient='vertical',
+        command=canvas.yview,
+        style='Presence.Vertical.TScrollbar',
+    )
     scrollbar.pack(side='right', fill='y')
     canvas.configure(yscrollcommand=scrollbar.set)
     canvas.pack(side='left', fill='both', expand=True)
@@ -495,15 +500,18 @@ def open_scenario_chooser(self, role_dialog=None):
     focus_var.trace_add('write', refresh_cards)
 
     def wheel(event):
-        canvas.yview_scroll(int(-1 * (event.delta / 120)), 'units')
+        units = base.mousewheel_units(event)
+        if units:
+            canvas.yview_scroll(units, 'units')
+            return 'break'
+        return None
 
-    canvas.bind_all('<MouseWheel>', wheel)
+    # Bind on the dialog rather than globally so scrolling works over cards,
+    # labels and controls without leaking the binding into the rest of the app.
+    for sequence in ('<MouseWheel>', '<Button-4>', '<Button-5>'):
+        dialog.bind(sequence, wheel, add='+')
 
     def close_dialog():
-        try:
-            canvas.unbind_all('<MouseWheel>')
-        except tk.TclError:
-            pass
         dialog.destroy()
 
     dialog.protocol('WM_DELETE_WINDOW', close_dialog)
@@ -530,10 +538,6 @@ def select_scenario(self, scenario, dialog=None):
     self.display_hint.set(scenario['visible_problem'])
 
     if dialog and dialog.winfo_exists():
-        try:
-            dialog.unbind_all('<MouseWheel>')
-        except tk.TclError:
-            pass
         dialog.destroy()
 
 
