@@ -19,6 +19,22 @@ fail() {
 printf "Presence Coach - first-time macOS setup\n"
 printf "Requires Python 3.12 and an internet connection.\n\n"
 
+printf "Checking Apple Command Line Tools...\n"
+if ! xcode-select -p >/dev/null 2>&1 || ! xcrun --find cc >/dev/null 2>&1; then
+  printf "\nAdditional macOS component required\n"
+  printf "Presence Coach needs Apple's free Command Line Tools to install some dependencies.\n"
+  printf "macOS will now ask you to install them.\n\n"
+
+  xcode-select --install >/dev/null 2>&1 || true
+
+  printf "Complete the Apple installation when the macOS window appears.\n"
+  printf "After it finishes, run Setup-Mac.command again.\n"
+  printf "If no installation window appears, open Terminal and run: xcode-select --install\n"
+  pause_before_exit
+  exit 0
+fi
+printf "Apple Command Line Tools found.\n"
+
 PYTHON_BIN=""
 for candidate in python3.12 python3; do
   candidate_path="$(command -v "$candidate" 2>/dev/null || true)"
