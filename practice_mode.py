@@ -1,6 +1,6 @@
 """Role-selection and AI coachee practice mode for Presence Coach.
 
-This layer builds on the optimized UI launcher without changing the coaching or
+This layer builds directly on the base desktop application without changing the
 audio transport. It adds two explicit experiences:
 - I am a Coachee: existing Presence-as-coach behavior.
 - I am a Coach: the user coaches a simulated professional client.
@@ -10,7 +10,7 @@ import time
 import tkinter as tk
 from tkinter import messagebox, ttk
 
-import launch as performance
+import app as base
 from scenarios import (
     COACHEE_SCENARIOS,
     DIFFICULTY_LEVELS,
@@ -21,8 +21,6 @@ from scenarios import (
     scenario_kickoff,
     scenario_matches,
 )
-
-base = performance.base
 
 _original_init = base.App.__init__
 _original_start = base.App.start

@@ -29,7 +29,8 @@ if errorlevel 1 (
   echo Desktop shortcut created successfully.
 )
 
-echo Setup complete. Use the Presence Coach desktop/Start Menu shortcut or Start.cmd.\necho Uninstall Presence Coach is available from the Windows Start Menu.
+echo Setup complete. Use the Presence Coach desktop/Start Menu shortcut or Start.cmd.
+echo Uninstall Presence Coach is available from the Windows Start Menu.
 pause
 exit /b 0
 

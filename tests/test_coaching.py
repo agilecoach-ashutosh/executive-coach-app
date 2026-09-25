@@ -17,6 +17,22 @@ class TurnTests(unittest.TestCase):
             detects_imminent_danger('This is a hypothetical test case about suicide now.')
         )
         self.assertFalse(detects_imminent_danger('I feel overwhelmed and hopeless today.'))
+        self.assertFalse(
+            detects_imminent_danger('I am not planning to kill myself tonight.')
+        )
+
+    def test_current_danger_is_not_masked_by_earlier_negation(self):
+        self.assertTrue(
+            detects_imminent_danger(
+                'I was not suicidal before, but I am planning to kill myself tonight.'
+            )
+        )
+        self.assertTrue(
+            detects_imminent_danger(
+                'I am not going to kill myself right now, but I have the means '
+                'and I intend to do it tonight.'
+            )
+        )
 
     def test_quiet_does_not_trigger_coach(self):
         gate = TurnGate()

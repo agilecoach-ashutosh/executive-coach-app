@@ -161,21 +161,60 @@ _IMMEDIACY_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _NEGATED_OR_HYPOTHETICAL_PATTERN = re.compile(
-    r"\b(?:not\s+suicidal|not\s+going\s+to|no\s+intention|do\s+not\s+intend|"
-    r"don't\s+intend|used\s+to|in\s+the\s+past|hypothetical|example|test\s+case)\b",
+    r"\b(?:not\s+suicidal|not\s+going\s+to|not\s+planning\s+to|"
+    r"no\s+intention|do\s+not\s+intend|don't\s+intend|used\s+to|"
+    r"in\s+the\s+past|hypothetical|example|test\s+case)\b",
+    re.IGNORECASE,
+)
+_CLAUSE_SPLIT_PATTERN = re.compile(
+    r"\s*(?:[.!?;]+|,|\bbut\b|\bhowever\b|\byet\b|\bthough\b|\balthough\b)\s*",
+    re.IGNORECASE,
+)
+_ANAPHORIC_CURRENT_INTENT_PATTERN = re.compile(
+    r"\b(?:plan(?:ning)?\s+to\s+(?:do\s+(?:it|that)|act)|"
+    r"intend(?:ing)?\s+to\s+(?:do\s+(?:it|that)|act)|"
+    r"ready\s+to\s+(?:do\s+(?:it|that)|act))\b",
     re.IGNORECASE,
 )
 
 
 def detects_imminent_danger(text: str) -> bool:
-    """Detect narrow, explicit self-harm urgency as a deterministic backstop."""
+    """Detect narrow, explicit self-harm urgency without blanket negation masking."""
     normalized = " ".join((text or "").split())
-    if not normalized or _NEGATED_OR_HYPOTHETICAL_PATTERN.search(normalized):
+    if not normalized:
         return False
-    return bool(
-        _SELF_HARM_PATTERN.search(normalized)
-        and _IMMEDIACY_PATTERN.search(normalized)
-    )
+
+    clauses = [
+        clause.strip()
+        for clause in _CLAUSE_SPLIT_PATTERN.split(normalized)
+        if clause.strip()
+    ]
+    prior_self_harm_context = False
+
+    for clause in clauses:
+        self_harm = bool(_SELF_HARM_PATTERN.search(clause))
+        imminent = bool(_IMMEDIACY_PATTERN.search(clause))
+        negated = bool(_NEGATED_OR_HYPOTHETICAL_PATTERN.search(clause))
+
+        # A current explicit danger clause wins even if an earlier clause described
+        # past/negated ideation. Negation only suppresses the clause it appears in.
+        if self_harm and imminent and not negated:
+            return True
+
+        # Preserve a nearby self-harm referent so natural follow-ups such as
+        # "but I have the means and intend to do it tonight" are not missed.
+        if (
+            prior_self_harm_context
+            and imminent
+            and _ANAPHORIC_CURRENT_INTENT_PATTERN.search(clause)
+            and not negated
+        ):
+            return True
+
+        if self_harm:
+            prior_self_harm_context = True
+
+    return False
 
 
 # Distilled from Agile Orbit; provenance and full practice bank are in reference/.

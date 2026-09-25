@@ -26,6 +26,7 @@ from groq_engine import (
 from reviewer import (
     FAST_GROQ_REVIEW_MODEL,
     build_review_prompt,
+    should_try_review_fallback,
     structured_model_output_to_text,
 )
 from scenarios import build_coachee_prompt, scenario_kickoff
@@ -35,6 +36,7 @@ _original_init = base.App.__init__
 _original_start = base.App.start
 _original_forget_key = base.App.forget_key
 _original_generate_review = base.App.generate_coaching_review
+_original_set_session_controls = base.App.set_session_controls
 
 GEMINI = "Google Gemini"
 GROQ = "Groq"
@@ -52,9 +54,13 @@ def provider_init(self):
     self.groq_stt_model = tk.StringVar(master=self, value=DEFAULT_STT_MODEL)
     self.groq_voice = tk.StringVar(master=self, value=DEFAULT_VOICE)
     self.provider_consent_text = tk.StringVar(master=self)
+    self.groq_remember = tk.BooleanVar(master=self, value=False)
+    self._active_provider = None
 
     try:
-        self.groq_key.set(base.keyring.get_password("PresenceCoach", "groq") or "")
+        saved_groq_key = base.keyring.get_password("PresenceCoach", "groq") or ""
+        self.groq_key.set(saved_groq_key)
+        self.groq_remember.set(bool(saved_groq_key))
     except Exception:
         pass
 
@@ -153,7 +159,7 @@ def _inject_provider_settings(self):
     tk.Checkbutton(
         groq_card,
         text="Remember Groq key securely in this device’s credential store",
-        variable=self.remember,
+        variable=self.groq_remember,
         bg=base.PANEL,
         fg=base.MUTED,
         selectcolor=base.SURFACE,
@@ -172,7 +178,7 @@ def _inject_provider_settings(self):
         (
             "Conversation model",
             self.groq_model,
-            ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "llama-3.3-70b-versatile"],
+            ["openai/gpt-oss-120b", "openai/gpt-oss-20b", "qwen/qwen3.8-27b"],
         ),
         (
             "Speech recognition",
@@ -220,6 +226,15 @@ def _wire_provider_consent(self):
 
 def _update_provider_ui(self):
     selected = self.provider.get() if hasattr(self, "provider") else GEMINI
+    engine = getattr(self, "engine", None)
+    stopping = getattr(engine, "stopping", None) if engine else None
+    live = bool(engine and engine.is_alive() and not (stopping and stopping.is_set()))
+    active = getattr(self, "_active_provider", None)
+    if live and active and selected != active:
+        # Provider authorization is session-scoped. Never let the visible provider
+        # drift away from the provider that owns the live connection.
+        self.after_idle(lambda: self.provider.set(active))
+        return
     if selected == GROQ:
         self.provider_consent_text.set(
             "I’m 18+ and allow this session’s voice/text to be processed by GroqCloud"
@@ -267,7 +282,7 @@ def provider_forget_key(self):
             )
             return
         self.groq_key.set("")
-        self.remember.set(False)
+        self.groq_remember.set(False)
         return
     return _original_forget_key(self)
 
@@ -389,7 +404,13 @@ def provider_api_help(self):
 
 def provider_start(self):
     if not hasattr(self, "provider") or self.provider.get() != GROQ:
-        return _original_start(self)
+        result = _original_start(self)
+        engine = getattr(self, "engine", None)
+        if engine and (engine.is_alive() or self.state.get().startswith("Connecting")):
+            self._active_provider = GEMINI
+            if hasattr(self, "_provider_combo"):
+                self._provider_combo.configure(state="disabled")
+        return result
 
     if self.engine and self.engine.is_alive():
         return
@@ -431,7 +452,7 @@ def provider_start(self):
     if getattr(self, "practice_mode", "coachee") == "coach":
         review._clear_review_state(self)
 
-    if self.remember.get():
+    if self.groq_remember.get():
         try:
             base.keyring.set_password("PresenceCoach", "groq", key)
         except Exception:
@@ -454,7 +475,8 @@ def provider_start(self):
     english_voice_constraint = (
         "\n\nPROVIDER VOICE CONSTRAINT\n"
         "This Groq session currently uses English-only Orpheus TTS. "
-        "Understand multilingual user speech when possible, but produce spoken responses in natural English."
+        "Understand multilingual user speech when possible, but produce spoken responses in natural English. "
+        "Keep spoken replies concise: usually one reflection or one question, ideally under 180 characters."
     )
 
     if getattr(self, "practice_mode", "coachee") == "coach":
@@ -473,6 +495,10 @@ def provider_start(self):
         response_status = "Reflecting"
         self.display_state.set("Connecting")
         self.display_hint.set("Preparing your coaching space with Groq.")
+
+    self._active_provider = GROQ
+    if hasattr(self, "_provider_combo"):
+        self._provider_combo.configure(state="disabled")
 
     self.engine = GroqEngine(
         key,
@@ -494,6 +520,15 @@ def provider_start(self):
     self.start_button.configure(state="disabled")
     self.end_button.configure(state="normal")
     self.engine.start()
+
+
+def provider_set_session_controls(self, live):
+    _original_set_session_controls(self, live)
+    combo = getattr(self, "_provider_combo", None)
+    if combo is not None:
+        combo.configure(state="disabled" if live else "readonly")
+    if not live:
+        self._active_provider = None
 
 
 def provider_generate_review(self):
@@ -562,6 +597,8 @@ def provider_generate_review(self):
                 return
             except Exception as exc:
                 errors.append(f"{model}: {exc}")
+                if not should_try_review_fallback(exc, GROQ):
+                    break
 
         self._review_queue.put((
             generation,
@@ -577,6 +614,7 @@ base.App.__init__ = provider_init
 base.App.start = provider_start
 base.App.api_help = provider_api_help
 base.App.forget_key = provider_forget_key
+base.App.set_session_controls = provider_set_session_controls
 base.App.generate_coaching_review = provider_generate_review
 
 

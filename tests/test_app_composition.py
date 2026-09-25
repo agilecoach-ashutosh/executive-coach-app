@@ -43,26 +43,38 @@ class AppCompositionTests(unittest.TestCase):
 
         self.assertIs(entrypoint.base.Transcript, entrypoint.ElapsedTranscript)
 
-    def test_role_segment_buttons_switch_ttk_styles_without_tk_button_options(self):
-        launch = sys.modules["launch"]
-        button = _FakeButton()
+    def test_compatibility_launcher_points_to_the_production_app_class(self):
+        launch = importlib.import_module("launch")
+        self.assertIs(launch.PresenceApp, entrypoint.base.App)
+        self.assertIs(launch.base.App, entrypoint.base.App)
 
-        launch.PresenceApp._set_segment_style(None, button, True)
-        self.assertEqual(button.config, {"style": "Presence.PrimaryCompact.TButton"})
+    def test_provider_selector_is_locked_for_live_sessions(self):
+        provider_mode = sys.modules["provider_mode"]
+        fake = types.SimpleNamespace(
+            interrupt_button=_FakeButton(),
+            ready_button=_FakeButton(),
+            end_button=_FakeButton(),
+            start_button=_FakeButton(),
+            _provider_combo=_FakeButton(),
+            _active_provider="Groq",
+        )
 
-        button.config.clear()
-        launch.PresenceApp._set_segment_style(None, button, False)
-        self.assertEqual(button.config, {"style": "Presence.SecondaryCompact.TButton"})
+        provider_mode.provider_set_session_controls(fake, True)
+        self.assertEqual(fake._provider_combo.config["state"], "disabled")
+        self.assertEqual(fake.start_button.config["state"], "disabled")
+
+        provider_mode.provider_set_session_controls(fake, False)
+        self.assertEqual(fake._provider_combo.config["state"], "readonly")
+        self.assertIsNone(fake._active_provider)
 
     def test_mousewheel_units_supports_macos_windows_and_x11(self):
-        launch = sys.modules["launch"]
-        helper = launch.base.mousewheel_units
+        helper = entrypoint.base.mousewheel_units
 
-        with patch.object(launch.base.sys, "platform", "darwin"):
+        with patch.object(entrypoint.base.sys, "platform", "darwin"):
             self.assertEqual(helper(types.SimpleNamespace(delta=1)), -1)
             self.assertEqual(helper(types.SimpleNamespace(delta=-1)), 1)
 
-        with patch.object(launch.base.sys, "platform", "win32"):
+        with patch.object(entrypoint.base.sys, "platform", "win32"):
             self.assertEqual(helper(types.SimpleNamespace(delta=120)), -1)
             self.assertEqual(helper(types.SimpleNamespace(delta=-120)), 1)
 

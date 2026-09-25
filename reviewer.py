@@ -15,6 +15,7 @@ from google import genai
 from google.genai import types
 
 from review_criteria import get_review_criteria
+from runtime_errors import classify_runtime_error
 
 REVIEW_MODELS = (
     "gemini-3.6-flash",
@@ -24,6 +25,24 @@ REVIEW_MODELS = (
 
 FAST_GROQ_REVIEW_MODEL = "openai/gpt-oss-20b"
 REVIEW_TIMEOUT_MILLISECONDS = 30_000
+
+_NON_FALLBACK_REVIEW_ERRORS = {
+    "quota",
+    "auth",
+    "access",
+    "network",
+    "timeout",
+    "provider_unavailable",
+}
+
+
+def should_try_review_fallback(exc: Exception, provider_name: str) -> bool:
+    """Only try another model when a different model could plausibly help."""
+    if isinstance(exc, (ValueError, KeyError, TypeError)):
+        # Structured-output/schema failures can be model-specific.
+        return True
+    issue = classify_runtime_error(exc, provider_name, context="review")
+    return issue.code not in _NON_FALLBACK_REVIEW_ERRORS
 
 ACC_BEHAVIOR_IDS = (
     "A3.1", "A3.2", "A3.3", "A3.4",
@@ -596,6 +615,8 @@ def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, sce
                 return structured_model_output_to_text(raw, level, rows)
             except Exception as exc:
                 errors.append(f"{model}: {exc}")
+                if not should_try_review_fallback(exc, "Google Gemini"):
+                    break
 
         detail = "\n\n".join(errors[-3:]) if errors else "No model returned a valid structured review."
         raise RuntimeError(
