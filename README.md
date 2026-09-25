@@ -166,6 +166,19 @@ Run:
 Setup-Mac.command
 ```
 
+> [!NOTE]
+> **First-time Mac setup:** Presence Coach may need Apple's free **Command Line Tools** to install one of its Python dependencies. You do **not** need the full Xcode application.
+>
+> `Setup-Mac.command` checks for the tools automatically. If they are missing, macOS will open Apple's installer. Complete that installation, then run `Setup-Mac.command` again.
+>
+> If the Apple installer does not appear, open Terminal and run:
+>
+> ```bash
+> xcode-select --install
+> ```
+>
+> If macOS blocks `Setup-Mac.command` because it was downloaded from the internet, Control-click the file and choose **Open**, or use **System Settings → Privacy & Security → Open Anyway**.
+
 The setup script creates a local virtual environment and installs the dependencies from `requirements.txt` using the validated versions in `constraints.txt`.
 
 Start the application with:
