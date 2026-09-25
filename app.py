@@ -104,7 +104,10 @@ class App(tk.Tk):
         self.voice = tk.StringVar(value='Kore')
         self.pause = tk.StringVar(value='6')
         self.threshold = tk.StringVar(value='0.018')
-        self.remember = tk.BooleanVar(value=False)
+        # Keep the UI aligned with the credential store: if a Gemini key was
+        # loaded successfully, the "remember" control should say so.
+        self.remember_gemini = tk.BooleanVar(value=bool(self.key.get()))
+        self.remember = self.remember_gemini
         self.consent = tk.BooleanVar(value=False)
         self.hold, self.muted = tk.BooleanVar(), tk.BooleanVar()
 
@@ -598,7 +601,7 @@ class App(tk.Tk):
 
         self.settings_widgets = [key_entry]
         for label, variable, choices in [
-            ('Live model', self.model, ['gemini-3.8-live', 'gemini-3.1-flash-live-preview']),
+            ('Live model', self.model, ['gemini-3.8-live']),
             ('Voice', self.voice, ['Kore', 'Aoede', 'Puck', 'Charon', 'Fenrir']),
             ('Silence before reply', self.pause, ['3', '6', '10', '15']),
             ('Mic threshold', self.threshold, ['0.008', '0.018', '0.035', '0.06']),
