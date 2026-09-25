@@ -143,7 +143,7 @@ Run:
 Setup.cmd
 ```
 
-The setup script creates a local virtual environment, installs the dependencies from `requirements.txt` using the validated versions in `constraints.txt`, and creates a developer shortcut.
+The setup script creates a local virtual environment, installs the dependencies from `requirements.txt` using the validated versions in `constraints.txt`, and creates a **Presence Coach** desktop shortcut plus **Presence Coach** and **Uninstall Presence Coach** entries in the Windows Start Menu.
 
 Start the application with:
 
@@ -179,13 +179,40 @@ Setup-Mac.command
 >
 > If macOS blocks `Setup-Mac.command` because it was downloaded from the internet, Control-click the file and choose **Open**, or use **System Settings → Privacy & Security → Open Anyway**.
 
-The setup script creates a local virtual environment and installs the dependencies from `requirements.txt` using the validated versions in `constraints.txt`.
+The setup script creates a local virtual environment and installs the dependencies from `requirements.txt` using the validated versions in `constraints.txt`. It also makes `Start-Mac.command` and `Uninstall-Mac.command` executable.
 
 Start the application with:
 
 ```text
 Start-Mac.command
 ```
+
+## Uninstall Presence Coach
+
+Presence Coach uses a project-local installation, so uninstalling it does not require removing Python or other system tools.
+
+### Windows
+
+Use **Start → Presence Coach → Uninstall Presence Coach**, or double-click:
+
+```text
+Uninstall.cmd
+```
+
+The uninstaller removes the local `.venv`, Presence Coach desktop/Start Menu shortcuts, and generated Python caches. It asks separately whether to remove saved Gemini/Groq API keys from Windows Credential Manager.
+
+### macOS
+
+Double-click:
+
+```text
+Uninstall-Mac.command
+```
+
+The uninstaller removes the local `.venv` and generated Python caches. It asks separately whether to remove saved Gemini/Groq API keys from macOS Keychain.
+
+> [!IMPORTANT]
+> Uninstalling Presence Coach does **not** remove Python 3.12, Apple Command Line Tools, Homebrew, PortAudio, or exported transcripts, Word reviews, and MP3 recordings. The source/project folder is intentionally left in place; delete or move that folder to Trash manually only if you no longer want the source files.
 
 ## First-time configuration
 
