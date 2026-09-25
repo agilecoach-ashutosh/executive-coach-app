@@ -93,20 +93,16 @@ class PresenceApp(base.App):
         self._update_mode_visuals()
 
     def _set_segment_style(self, button, selected):
-        if selected:
-            button.configure(
-                bg=base.AMBER,
-                fg=base.BG,
-                activebackground='#ffd094',
-                activeforeground=base.BG,
+        # Shared buttons are ttk widgets so their colours remain portable on macOS.
+        # Switch the named style rather than configuring tk.Button-only options
+        # such as bg/fg/activebackground.
+        button.configure(
+            style=(
+                'Presence.PrimaryCompact.TButton'
+                if selected
+                else 'Presence.SecondaryCompact.TButton'
             )
-        else:
-            button.configure(
-                bg=base.SURFACE_2,
-                fg=base.INK,
-                activebackground='#172a40',
-                activeforeground=base.INK,
-            )
+        )
 
     def _update_mode_visuals(self):
         coach_mode = self.mode.get() == 'coach'
