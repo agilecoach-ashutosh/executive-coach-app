@@ -10,6 +10,7 @@ from reviewer import (
     format_duration,
     parse_structured_review,
     render_structured_review,
+    should_try_review_fallback,
     transcript_for_review,
 )
 
@@ -220,6 +221,28 @@ class ReviewerMetricsTests(unittest.TestCase):
 
     def test_groq_has_dedicated_fast_review_model(self):
         self.assertEqual(FAST_GROQ_REVIEW_MODEL, "openai/gpt-oss-20b")
+
+    def test_review_fallback_stops_for_quota_and_auth_failures(self):
+        self.assertFalse(
+            should_try_review_fallback(
+                RuntimeError("429 Too Many Requests: quota exceeded"),
+                "Groq",
+            )
+        )
+        self.assertFalse(
+            should_try_review_fallback(
+                RuntimeError("401 unauthorized invalid api key"),
+                "Google Gemini",
+            )
+        )
+
+    def test_review_fallback_allows_structured_output_failure(self):
+        self.assertTrue(
+            should_try_review_fallback(
+                ValueError("Review model did not return a JSON object."),
+                "Google Gemini",
+            )
+        )
 
 
 if __name__ == "__main__":
