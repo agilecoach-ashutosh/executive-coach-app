@@ -80,7 +80,7 @@ class GroqEngineHelperTests(unittest.TestCase):
 
         engine._speak_chunk("What matters here?")
 
-        engine._play_wav_bytes.assert_called_once_with(b"RIFF-in-memory")
+        engine._play_wav_bytes.assert_called_once_with(b"RIFF-in-memory", 0)
         create.assert_called_once_with(
             model=engine.tts_model,
             voice=engine.voice,
@@ -100,6 +100,76 @@ class GroqEngineHelperTests(unittest.TestCase):
         self.assertTrue(engine.stopping.is_set())
         self.assertTrue(any(kind == 'safety' for kind, _ in list(engine.events.queue)))
         engine._generate_and_speak.assert_not_called()
+
+    def test_interrupt_during_blocking_chat_discards_pending_ai_reply(self):
+        engine = self.make_engine()
+        response = types.SimpleNamespace(
+            choices=[types.SimpleNamespace(message=types.SimpleNamespace(content="Late reply"))]
+        )
+
+        def create(**_kwargs):
+            engine.command("interrupt")
+            return response
+
+        engine.client = types.SimpleNamespace(
+            chat=types.SimpleNamespace(
+                completions=types.SimpleNamespace(create=create),
+            )
+        )
+        engine._speak_chunk = Mock()
+
+        engine._respond_to_text("I want to explore this.", visible_input=True)
+
+        emitted = list(engine.events.queue)
+        self.assertFalse(any(kind == engine.output_role and value == "Late reply" for kind, value in emitted))
+        engine._speak_chunk.assert_not_called()
+
+    def test_stop_during_blocking_chat_does_not_append_or_emit_ai_reply(self):
+        engine = self.make_engine()
+        response = types.SimpleNamespace(
+            choices=[types.SimpleNamespace(message=types.SimpleNamespace(content="Too late"))]
+        )
+
+        def create(**_kwargs):
+            engine.stop()
+            return response
+
+        engine.client = types.SimpleNamespace(
+            chat=types.SimpleNamespace(
+                completions=types.SimpleNamespace(create=create),
+            )
+        )
+        engine._speak_chunk = Mock()
+
+        engine._respond_to_text("End this session.", visible_input=True)
+
+        emitted = list(engine.events.queue)
+        self.assertFalse(any(kind == engine.output_role and value == "Too late" for kind, value in emitted))
+        self.assertFalse(any(message.get("content") == "Too late" for message in engine.messages))
+        engine._speak_chunk.assert_not_called()
+
+    def test_tts_rate_limit_keeps_session_alive_and_surfaces_transcript_notice(self):
+        engine = self.make_engine()
+        rate_error = RuntimeError("429 Too Many Requests: rate limit")
+        create = Mock(side_effect=[rate_error, rate_error])
+        engine.client = types.SimpleNamespace(
+            audio=types.SimpleNamespace(
+                speech=types.SimpleNamespace(create=create),
+            )
+        )
+        engine._wait_for_tts_slot = Mock(return_value=True)
+
+        spoken = engine._speak_chunk("What matters here?", 0)
+
+        self.assertFalse(spoken)
+        self.assertFalse(engine.stopping.is_set())
+        self.assertEqual(create.call_count, 2)
+        self.assertTrue(
+            any(
+                kind == "notice" and "rate limit" in value.lower()
+                for kind, value in list(engine.events.queue)
+            )
+        )
 
 
 if __name__ == "__main__":
