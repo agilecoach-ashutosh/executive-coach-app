@@ -171,8 +171,7 @@ _CLAUSE_SPLIT_PATTERN = re.compile(
     re.IGNORECASE,
 )
 _ANAPHORIC_CURRENT_INTENT_PATTERN = re.compile(
-    r"\b(?:have\s+(?:the\s+)?means|have\s+(?:a\s+)?(?:gun|weapon|knife|pills)|"
-    r"plan(?:ning)?\s+to\s+(?:do\s+(?:it|that)|act)|"
+    r"\b(?:plan(?:ning)?\s+to\s+(?:do\s+(?:it|that)|act)|"
     r"intend(?:ing)?\s+to\s+(?:do\s+(?:it|that)|act)|"
     r"ready\s+to\s+(?:do\s+(?:it|that)|act))\b",
     re.IGNORECASE,
