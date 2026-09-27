@@ -18,6 +18,8 @@ if errorlevel 1 goto failed
 if errorlevel 1 goto failed
 ".venv\Scripts\python.exe" -m pip install -r requirements.txt -c constraints.txt
 if errorlevel 1 goto failed
+".venv\Scripts\python.exe" update_app.py --register-install
+if errorlevel 1 goto failed
 
 ".venv\Scripts\python.exe" windows_setup.py
 if errorlevel 1 (

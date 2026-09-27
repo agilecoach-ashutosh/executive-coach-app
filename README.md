@@ -130,7 +130,7 @@ Headphones are recommended to reduce microphone and speaker feedback.
 
 ### Windows setup
 
-Clone the repository:
+Download and extract **Presence-Coach-source.zip** from [Releases](https://github.com/agilecoach-ashutosh/executive-coach-app/releases), or clone the repository if you are working with source code:
 
 ```powershell
 git clone https://github.com/agilecoach-ashutosh/executive-coach-app.git
@@ -143,7 +143,7 @@ Run:
 Setup.cmd
 ```
 
-The setup script creates a local virtual environment, installs the dependencies from `requirements.txt` using the validated versions in `constraints.txt`, and creates a **Presence Coach** desktop shortcut plus **Presence Coach** and **Uninstall Presence Coach** entries in the Windows Start Menu.
+The setup script creates a local virtual environment, installs the dependencies from `requirements.txt` using the validated versions in `constraints.txt`, and creates a **Presence Coach** desktop shortcut plus **Presence Coach**, **Update Presence Coach**, and **Uninstall Presence Coach** entries in the Windows Start Menu.
 
 Start the application with:
 
@@ -153,7 +153,7 @@ Start.cmd
 
 ### macOS setup
 
-Clone the repository:
+Download and extract **Presence-Coach-source.zip** from [Releases](https://github.com/agilecoach-ashutosh/executive-coach-app/releases), or clone the repository if you are working with source code:
 
 ```bash
 git clone https://github.com/agilecoach-ashutosh/executive-coach-app.git
@@ -179,13 +179,21 @@ Setup-Mac.command
 >
 > If macOS blocks `Setup-Mac.command` because it was downloaded from the internet, Control-click the file and choose **Open**, or use **System Settings → Privacy & Security → Open Anyway**.
 
-The setup script creates a local virtual environment and installs the dependencies from `requirements.txt` using the validated versions in `constraints.txt`. It also makes `Start-Mac.command` and `Uninstall-Mac.command` executable.
+The setup script creates a local virtual environment and installs the dependencies from `requirements.txt` using the validated versions in `constraints.txt`. It also makes `Start-Mac.command`, `Update-Mac.command`, and `Uninstall-Mac.command` executable.
 
 Start the application with:
 
 ```text
 Start-Mac.command
 ```
+
+### Update without Git
+
+Close Presence Coach, then double-click **Update Presence Coach** in the Windows Start Menu (or `Update.cmd` in the application folder). On macOS, double-click `Update-Mac.command`. An internet connection and the Python 3.12 used during setup are required; Git is not. The updater downloads the latest stable, tested [GitHub release](https://github.com/agilecoach-ashutosh/executive-coach-app/releases), checks its SHA-256 digest, verifies managed files have no local edits, and updates the app. It prepares replacement dependencies only if the dependency files changed. If an update fails, it restores the app files and previous environment. Existing exported files and saved API keys are outside the update and are preserved.
+
+If your copy predates these update scripts, obtain them once by downloading a current release ZIP and running setup again, or by pulling the repository if it was cloned. Windows users should rerun `Setup.cmd` once to add the Update shortcut. After that, updates require no Git. A new release ZIP records its version during setup. An older ZIP installation without an update record asks once before replacing its existing app files; keep your own edits separately. In a Git checkout, the updater leaves `.git` untouched, so a later `git pull` may see changed files—continue using the updater for that installation.
+
+Only successful tests on `main` publish update releases. If no stable release is available, the updater reports that nothing can be downloaded yet; it does not install an untested branch snapshot.
 
 ## Uninstall Presence Coach
 
@@ -317,6 +325,7 @@ See **[PRIVACY.md](PRIVACY.md)** for the full privacy and data-processing notice
 | `privacy_mode.py` | Session-scoped provider authorization, privacy notice UI, and in-memory discard control |
 | `session_export.py` | Transcript and in-memory audio export helpers |
 | `session_export_mode.py` | Current application entry point and export interface |
+| `update_app.py` | Git-free release updater with checksum, local-edit checks, and rollback |
 | `windows_launch.py` | Windows GUI startup and callback error reporting |
 | `groq_engine.py` | Groq speech-to-text, LLM, and text-to-speech pipeline |
 | `coaching.py` | Coach behaviour instructions and transcript model |

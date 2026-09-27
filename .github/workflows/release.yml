@@ -1,0 +1,75 @@
+name: Publish tested updater release
+
+on:
+  workflow_run:
+    workflows: [Tests]
+    types: [completed]
+    branches: [main]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    if: >-
+      github.event.workflow_run.conclusion == 'success' &&
+      github.event.workflow_run.event == 'push' &&
+      github.event.workflow_run.head_branch == 'main' &&
+      github.event.workflow_run.head_repository.full_name == github.repository
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          ref: ${{ github.event.workflow_run.head_sha }}
+          persist-credentials: false
+      - name: Package the verified source
+        env:
+          RELEASE_TAG: v0.0.${{ github.event.workflow_run.run_number }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          python - <<'PY'
+          import hashlib
+          import json
+          import os
+          import subprocess
+          import zipfile
+          from pathlib import Path
+
+          paths = subprocess.check_output(['git', 'ls-files', '-z']).decode().split('\0')
+          hashes = {}
+          metadata = json.dumps({
+              'version': os.environ['RELEASE_TAG'],
+              'commit': os.environ['RELEASE_SHA'],
+          }).encode()
+          with zipfile.ZipFile('Presence-Coach-source.zip', 'w', zipfile.ZIP_DEFLATED) as out:
+              for name in paths:
+                  if name and not name.startswith(('.github/', 'tests/')):
+                      contents = Path(name).read_bytes()
+                      entry = zipfile.ZipInfo('presence-coach/' + name)
+                      entry.create_system = 3
+                      entry.external_attr = (Path(name).stat().st_mode & 0xffff) << 16
+                      entry.compress_type = zipfile.ZIP_DEFLATED
+                      out.writestr(entry, contents)
+                      hashes[name] = hashlib.sha256(contents).hexdigest()
+              out.writestr('presence-coach/presence-release.json', metadata)
+              hashes['presence-release.json'] = hashlib.sha256(metadata).hexdigest()
+              out.writestr('presence-coach/presence-manifest.json', json.dumps({
+                  'version': os.environ['RELEASE_TAG'], 'files': hashes,
+              }))
+          PY
+          python - <<'PY'
+          import hashlib
+          from pathlib import Path
+          from update_app import unpack_release
+          archive = Path('Presence-Coach-source.zip').read_bytes()
+          unpack_release(archive, Path('/tmp/presence-release-check'), hashlib.sha256(archive).hexdigest())
+          PY
+      - name: Publish stable release with checksum-protected asset
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RELEASE_TAG: v0.0.${{ github.event.workflow_run.run_number }}
+          RELEASE_SHA: ${{ github.event.workflow_run.head_sha }}
+        run: |
+          gh release create "$RELEASE_TAG" Presence-Coach-source.zip \
+            --target "$RELEASE_SHA" --title "Presence Coach $RELEASE_TAG" \
+            --generate-notes --latest

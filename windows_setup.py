@@ -81,6 +81,7 @@ def create_shortcuts(root: Path, icon_path: Path) -> list[Path]:
     target = (root / ".venv" / "Scripts" / "pythonw.exe").resolve()
     script = (root / "windows_launch.py").resolve()
     uninstall_script = (root / "Uninstall.cmd").resolve()
+    update_script = (root / "Update.cmd").resolve()
 
     if not target.exists():
         raise FileNotFoundError(f"Python launcher is missing: {target}")
@@ -88,6 +89,8 @@ def create_shortcuts(root: Path, icon_path: Path) -> list[Path]:
         raise FileNotFoundError(f"Presence Coach entry point is missing: {script}")
     if not uninstall_script.exists():
         raise FileNotFoundError(f"Presence Coach uninstaller is missing: {uninstall_script}")
+    if not update_script.exists():
+        raise FileNotFoundError(f"Presence Coach updater is missing: {update_script}")
 
     desktop = Path(
         shell.SHGetFolderPath(
@@ -115,6 +118,7 @@ def create_shortcuts(root: Path, icon_path: Path) -> list[Path]:
         )
     )
     uninstall_arguments = f'/d /c ""{uninstall_script}""'
+    update_arguments = f'/d /c ""{update_script}""'
 
     shortcuts = [
         (desktop / "Presence Coach.lnk", target, app_arguments, "Presence Coach"),
@@ -124,6 +128,12 @@ def create_shortcuts(root: Path, icon_path: Path) -> list[Path]:
             command_processor,
             uninstall_arguments,
             "Uninstall Presence Coach",
+        ),
+        (
+            start_menu / "Update Presence Coach.lnk",
+            command_processor,
+            update_arguments,
+            "Update Presence Coach",
         ),
     ]
 

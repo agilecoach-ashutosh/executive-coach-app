@@ -51,12 +51,13 @@ if [ -z "$PYTHON_BIN" ]; then
 fi
 
 printf "Using %s\n" "$PYTHON_BIN"
-chmod +x "$SCRIPT_DIR/Start-Mac.command" "$SCRIPT_DIR/Uninstall-Mac.command" 2>/dev/null || true
+chmod +x "$SCRIPT_DIR/Start-Mac.command" "$SCRIPT_DIR/Uninstall-Mac.command" "$SCRIPT_DIR/Update-Mac.command" 2>/dev/null || true
 "$PYTHON_BIN" -m venv .venv || fail "Could not create the local Python environment."
 
 VENV_PYTHON="$SCRIPT_DIR/.venv/bin/python"
 "$VENV_PYTHON" -m pip install --upgrade pip || fail "Could not update pip."
 "$VENV_PYTHON" -m pip install -r requirements.txt -c constraints.txt || fail "Could not install the application dependencies."
+"$VENV_PYTHON" "$SCRIPT_DIR/update_app.py" --register-install || fail "Could not verify the release package."
 
 "$VENV_PYTHON" -c 'import tkinter' || \
   fail "Python was installed without Tk support. Install the official Python 3.12 package from python.org and run setup again."
