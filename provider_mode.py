@@ -550,6 +550,7 @@ def provider_generate_review(self):
     conversation_model = self.groq_model.get()
     prompt = build_review_prompt(level, rows, metrics, scenario)
     generation = review._begin_review_generation(self)
+    self._review_requested_level = level
 
     self._review_started_at = time.monotonic()
     self._review_last_elapsed = -1

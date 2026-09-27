@@ -70,7 +70,10 @@ def split_for_tts(text: str, limit: int = 190) -> list[str]:
             else:
                 if part:
                     chunks.append(part)
-                part = word[:limit]
+                while len(word) > limit:
+                    chunks.append(word[:limit])
+                    word = word[limit:]
+                part = word
         if part:
             current = part
 

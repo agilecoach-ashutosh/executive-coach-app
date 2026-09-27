@@ -34,6 +34,15 @@ class TurnTests(unittest.TestCase):
             )
         )
 
+    def test_recent_action_and_hindi_immediacy_are_detected(self):
+        self.assertTrue(detects_imminent_danger('I took pills to kill myself.'))
+        self.assertTrue(detects_imminent_danger('मैं अभी आत्महत्या करने जा रहा हूँ।'))
+        self.assertTrue(detects_imminent_danger('Main abhi suicide karne wala hoon.'))
+
+    def test_explicitly_negated_intent_remains_non_imminent(self):
+        self.assertFalse(detects_imminent_danger("I don't want to kill myself now."))
+        self.assertFalse(detects_imminent_danger('मैं अभी आत्महत्या नहीं करने जा रहा हूँ।'))
+
     def test_quiet_does_not_trigger_coach(self):
         gate = TurnGate()
         for now in range(120):

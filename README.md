@@ -317,6 +317,7 @@ See **[PRIVACY.md](PRIVACY.md)** for the full privacy and data-processing notice
 | `privacy_mode.py` | Session-scoped provider authorization, privacy notice UI, and in-memory discard control |
 | `session_export.py` | Transcript and in-memory audio export helpers |
 | `session_export_mode.py` | Current application entry point and export interface |
+| `windows_launch.py` | Windows GUI startup and callback error reporting |
 | `groq_engine.py` | Groq speech-to-text, LLM, and text-to-speech pipeline |
 | `coaching.py` | Coach behaviour instructions and transcript model |
 | `scenarios.py` | Simulated professional-coachee scenarios |
@@ -334,6 +335,7 @@ app.py
 ```
 
 `session_export_mode.py` is the supported entry point. `launch.py` is retained only so older launch commands keep working without maintaining a second UI implementation.
+Windows shortcuts and `Start.cmd` use `windows_launch.py`, which opens that same application and reports otherwise hidden `pythonw.exe` startup errors.
 
 ## Testing
 
@@ -346,6 +348,10 @@ python -m unittest discover -s tests -v
 Automated tests and hardware mocks do not replace real microphone, speaker, and live-provider testing.
 
 ## Troubleshooting
+
+### Windows shortcut opens no window
+
+After pulling an update, run `Setup.cmd` to refresh existing shortcuts. If startup or a UI callback fails, Presence displays an error and writes details to `%LOCALAPPDATA%\PresenceCoach\startup-error.log`. This log may contain local file paths and error details; review it before sharing it.
 
 ### Runtime connection and audio messages
 

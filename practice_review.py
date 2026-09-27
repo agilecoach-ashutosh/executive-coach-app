@@ -29,6 +29,8 @@ def review_init(self):
     self.practice_review_shown = False
     self.practice_review_text = ""
     self.practice_review_level = tk.StringVar(master=self, value="PCC")
+    self.practice_review_generated_level = None
+    self.practice_review_level.trace_add("write", lambda *_: _review_level_changed(self))
     self._review_queue = queue.Queue()
     self._review_dialog = None
     self._review_output = None
@@ -59,6 +61,7 @@ def _clear_review_state(self):
     self.practice_session_ended_at = None
     self.practice_review_shown = False
     self.practice_review_text = ""
+    self.practice_review_generated_level = None
     self._review_started_at = None
     self._review_last_elapsed = -1
     if hasattr(self, "review_button"):
@@ -72,7 +75,30 @@ def _begin_review_generation(self):
             self._review_queue.get_nowait()
         except queue.Empty:
             break
+    self.practice_review_text = ""
+    self.practice_review_generated_level = None
+    if getattr(self, "_review_export_button", None) and self._review_export_button.winfo_exists():
+        self._review_export_button.configure(state="disabled")
     return self._review_generation
+
+
+def _review_level_changed(self):
+    """Do not show or export a review generated against another credential lens."""
+    self._review_generation += 1
+    self.practice_review_text = ""
+    self.practice_review_generated_level = None
+    self._review_started_at = None
+    while True:
+        try:
+            self._review_queue.get_nowait()
+        except queue.Empty:
+            break
+    if self._review_generate_button and self._review_generate_button.winfo_exists():
+        self._review_generate_button.configure(state="normal", text="Generate coaching review")
+    if self._review_export_button and self._review_export_button.winfo_exists():
+        self._review_export_button.configure(state="disabled")
+    if self._review_output and self._review_output.winfo_exists():
+        _set_review_output(self, "Review lens changed. Generate a new review for this level.")
 
 
 def review_select_coachee_mode(self, dialog=None):
@@ -436,6 +462,7 @@ def generate_coaching_review(self):
     rows = list(self.transcript.rows)
     scenario = self.current_scenario
     generation = _begin_review_generation(self)
+    self._review_requested_level = level
 
     self._review_started_at = time.monotonic()
     self._review_last_elapsed = -1
@@ -486,6 +513,7 @@ def _poll_review_result(self):
 
     if status == "ok":
         self.practice_review_text = value
+        self.practice_review_generated_level = self._review_requested_level
         _set_review_output(self, value)
         if self._review_export_button and self._review_export_button.winfo_exists():
             self._review_export_button.configure(state="normal")
@@ -504,7 +532,8 @@ def _poll_review_result(self):
 
 
 def export_coaching_review(self):
-    if not self.practice_review_text:
+    if (not self.practice_review_text or
+            self.practice_review_generated_level != self.practice_review_level.get().upper()):
         messagebox.showinfo("Review", "Generate a coaching review first.")
         return
 

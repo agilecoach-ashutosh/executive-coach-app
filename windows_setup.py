@@ -79,7 +79,7 @@ def create_shortcuts(root: Path, icon_path: Path) -> list[Path]:
         ) from exc
 
     target = (root / ".venv" / "Scripts" / "pythonw.exe").resolve()
-    script = (root / "session_export_mode.py").resolve()
+    script = (root / "windows_launch.py").resolve()
     uninstall_script = (root / "Uninstall.cmd").resolve()
 
     if not target.exists():
