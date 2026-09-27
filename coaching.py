@@ -151,19 +151,28 @@ IMMINENT_DANGER_RESPONSE = (
 
 _SELF_HARM_PATTERN = re.compile(
     r"\b(?:kill|hurt|harm|end)\s+(?:myself|my\s+life)\b|"
-    r"\b(?:suicide|suicidal|self[- ]harm)\b",
+    r"\b(?:suicide|suicidal|self[- ]harm|khudkushi|jaan\s+dene)\b|"
+    r"(?:आत्महत्या|खुदकुशी|जान\s+देने|खुद\s+को\s+मार)",
     re.IGNORECASE,
 )
 _IMMEDIACY_PATTERN = re.compile(
     r"\b(?:right\s+now|now|tonight|today|immediately|about\s+to|intend(?:ing)?\s+to|"
     r"plan(?:ning)?\s+to|have\s+(?:the\s+)?means|have\s+(?:a\s+)?(?:gun|weapon|knife|pills)|"
-    r"ready\s+to|cannot\s+stay\s+safe|can't\s+stay\s+safe)\b",
+    r"ready\s+to|cannot\s+stay\s+safe|can't\s+stay\s+safe|abhi|aaj|karne\s+wala)\b|"
+    r"(?:अभी|आज|करने\s+जा|कर\s+लूँगा|कर\s+लूंगा)",
+    re.IGNORECASE,
+)
+_RECENT_SELF_HARM_ACTION_PATTERN = re.compile(
+    r"\b(?:took|taken|swallowed|overdosed\s+on)\s+(?:(?:some|many|a\s+handful\s+of)\s+)?"
+    r"(?:pills|tablets|medication)\b|(?:गोलियाँ|गोलियां)\s+खा|\b(?:goliyan|goli)\s+(?:kha|li)",
     re.IGNORECASE,
 )
 _NEGATED_OR_HYPOTHETICAL_PATTERN = re.compile(
     r"\b(?:not\s+suicidal|not\s+going\s+to|not\s+planning\s+to|"
+    r"(?:do\s+not|don't)\s+want\s+to|won't|will\s+not|"
     r"no\s+intention|do\s+not\s+intend|don't\s+intend|used\s+to|"
-    r"in\s+the\s+past|hypothetical|example|test\s+case)\b",
+    r"in\s+the\s+past|hypothetical|example|test\s+case|nahi|nahin)\b|"
+    r"(?:नहीं|नही)",
     re.IGNORECASE,
 )
 _CLAUSE_SPLIT_PATTERN = re.compile(
@@ -193,7 +202,10 @@ def detects_imminent_danger(text: str) -> bool:
 
     for clause in clauses:
         self_harm = bool(_SELF_HARM_PATTERN.search(clause))
-        imminent = bool(_IMMEDIACY_PATTERN.search(clause))
+        imminent = bool(
+            _IMMEDIACY_PATTERN.search(clause)
+            or _RECENT_SELF_HARM_ACTION_PATTERN.search(clause)
+        )
         negated = bool(_NEGATED_OR_HYPOTHETICAL_PATTERN.search(clause))
 
         # A current explicit danger clause wins even if an earlier clause described

@@ -164,6 +164,14 @@ def clear_session_data(self, parent=None):
     parent = parent or self
     engine = getattr(self, "engine", None)
 
+    if getattr(self, "_audio_export_in_progress", False):
+        messagebox.showinfo(
+            "Audio export in progress",
+            "Wait for the MP3 export to finish before discarding session data.",
+            parent=parent,
+        )
+        return False
+
     if engine and engine.is_alive():
         messagebox.showinfo(
             "End the session first",

@@ -241,7 +241,8 @@ def confirm_unsaved_with_export_guard(self):
 
 
 def export_coaching_review_word(self):
-    if not getattr(self, "practice_review_text", ""):
+    if (not getattr(self, "practice_review_text", "") or
+            getattr(self, "practice_review_generated_level", None) != self.practice_review_level.get().upper()):
         messagebox.showinfo("Review", "Generate a coaching review first.")
         return False
 

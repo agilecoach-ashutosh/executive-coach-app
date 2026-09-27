@@ -195,7 +195,7 @@ def show_role_chooser(self):
 
 
 def select_coachee_mode(self, dialog=None):
-    if self.dirty and not self.confirm_unsaved():
+    if not self.confirm_unsaved():
         return
 
     self.practice_mode = 'coachee'
@@ -522,7 +522,7 @@ def open_scenario_chooser(self, role_dialog=None):
     search_entry.focus_set()
 
 def select_scenario(self, scenario, dialog=None):
-    if self.dirty and not self.confirm_unsaved():
+    if not self.confirm_unsaved():
         return
 
     self.practice_mode = 'coach'

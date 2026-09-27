@@ -40,6 +40,12 @@ class GroqEngineHelperTests(unittest.TestCase):
         self.assertTrue(all(len(chunk) <= 190 for chunk in chunks))
         self.assertGreater(len(chunks), 1)
 
+    def test_split_for_tts_preserves_one_oversized_token(self):
+        text = "a" * 430
+        chunks = split_for_tts(text)
+        self.assertEqual("".join(chunks), text)
+        self.assertTrue(all(len(chunk) <= 190 for chunk in chunks))
+
     def test_pcm_to_wav_bytes_builds_16khz_mono_pcm(self):
         pcm = b"\x00\x00" * 1600
         wav_bytes = pcm_to_wav_bytes(pcm)
