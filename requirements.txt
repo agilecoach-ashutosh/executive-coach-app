@@ -1,4 +1,4 @@
-google-genai>=2.24.0,<3
+google-genai>=2.25.0,<3
 groq>=1.7.0,<2
 sounddevice>=0.5,<1
 numpy>=2,<3
