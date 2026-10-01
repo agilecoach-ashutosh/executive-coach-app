@@ -149,6 +149,9 @@ class GroqEngine(threading.Thread):
         self.events.put((kind, value))
 
     def command(self, name, value=None):
+        if name == "mute":
+            # Capture runs independently while provider requests block this thread.
+            self.muted = bool(value)
         if name == "interrupt":
             # Incrementing a token lets blocking STT/LLM/TTS calls notice that an
             # interrupt happened while they were waiting for the provider.
@@ -549,4 +552,3 @@ class GroqEngine(threading.Thread):
                     self.recorder.append(data, sample_rate, channels, now=now)
                     self.playback_until = now + frames / sample_rate + .06
                     stream.write(data)
-
