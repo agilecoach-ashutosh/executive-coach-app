@@ -47,6 +47,15 @@ class GroqEngineHelperTests(unittest.TestCase):
         self.assertFalse(engine.audio_in.empty())
         self.assertTrue(any(message["content"] == "Original topic" for message in engine.messages))
 
+    def test_mute_immediately_blocks_capture_after_interrupt(self):
+        engine = self.make_engine()
+        engine.generating = True
+        engine.interrupting.set()
+        engine.command("mute", True)
+        engine.capture(b"\0\0" * 640, 640, None, None)
+        self.assertTrue(engine.audio_in.empty())
+        self.assertFalse(engine.has_audio())
+
     def test_long_session_keeps_opening_agreement_and_latest_corrections(self):
         engine = self.make_engine()
         engine.messages += [{"role": "user" if i % 2 == 0 else "assistant", "content": str(i)}
@@ -213,4 +222,3 @@ class GroqEngineHelperTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-
