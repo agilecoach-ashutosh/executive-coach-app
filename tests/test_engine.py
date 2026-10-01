@@ -30,6 +30,25 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
         engine.session = types.SimpleNamespace(send_realtime_input=AsyncMock(), send_client_content=AsyncMock())
         return engine
 
+
+    async def test_pending_reply_stop_and_clear_are_marked_incomplete_once(self):
+        engine = self.make_engine()
+        engine._response_pending = True
+        engine.stop()
+        engine.clear_output()
+        notes = [value for kind, value in list(engine.events.queue) if kind == 'notice']
+        self.assertEqual(len(notes), 1)
+        self.assertIn('playback was incomplete', notes[0])
+
+    async def test_drained_completed_playback_is_not_marked_incomplete(self):
+        engine = self.make_engine()
+        engine._response_pending = True
+        engine._response_done = True
+        engine._response_audio_seen = True
+        engine.playback(bytearray(8), 4, None, None)
+        engine.stop()
+        self.assertFalse(any(kind == 'notice' for kind, _ in list(engine.events.queue)))
+
     async def test_finishing_interrupted_turn_reenables_reply(self):
         engine = self.make_engine()
         engine.gate.active = True
@@ -126,3 +145,4 @@ class TransportTests(unittest.IsolatedAsyncioTestCase):
 
 if __name__ == '__main__':
     unittest.main()
+
