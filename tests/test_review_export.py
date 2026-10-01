@@ -202,6 +202,29 @@ class ReviewExportTests(unittest.TestCase):
             self.assertEqual(coachee_row[0], "Coachee")
             self.assertEqual(coachee_row[3], "")
 
+    def test_turn_citations_disambiguate_same_timestamp_and_keep_playback_notes(self):
+        review = """DEVELOPMENTAL REVIEW — PCC
+MARKER / BEHAVIORAL EVIDENCE
+C3 — Agreement — OBSERVED
+Evidence: [00:00:01] Outcome exploration. [T0002] Coach: “What matters?”
+HIGH-LEVERAGE PRACTICE EDGES
+- Insufficient evidence for a recommendation.
+BOTTOM LINE
+Short developmental excerpt.
+"""
+        rows = [("00:00:01", "Coachee", "I'm unsure"),
+                ("00:00:01", "Coach", "What matters?"),
+                ("00:00:02", "Session note", "Coachee playback was incomplete")]
+        with tempfile.TemporaryDirectory() as folder:
+            path = Path(folder) / "turn-review.docx"
+            export_review_docx(review, path, "PCC", _metrics(), transcript_rows=rows)
+            doc = Document(path)
+            table = doc.tables[1]
+            self.assertEqual(table.rows[1].cells[3].text, "")
+            self.assertIn("C3", table.rows[2].cells[3].text)
+            self.assertIn("playback was incomplete", table.rows[3].cells[2].text)
+            self.assertIn("High-Leverage Practice Edges", [p.text for p in doc.paragraphs])
+
     def test_markdown_word_review_attaches_observation_to_matching_timestamp(self):
         with tempfile.TemporaryDirectory() as folder:
             path = Path(folder) / "markdown-review.docx"
@@ -311,3 +334,4 @@ Developmental practice review only.
 
 if __name__ == "__main__":
     unittest.main()
+
