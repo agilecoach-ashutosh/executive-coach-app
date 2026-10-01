@@ -565,7 +565,7 @@ def build_coachee_prompt(scenario):
             "clear with attentive coaching. Do not create unnecessary resistance or obscure every answer."
         ),
         "Advanced": (
-            "Be more guarded, contradictory, and less immediately self-aware while remaining realistic. "
+            "Use a challenge that fits this person: uncertainty, analytical over-explaining, competing priorities, strong feelings, or guardedness. Do not make every advanced client resistant. "
             "Challenge assumptions naturally, resist premature solutions, and do not reward generic questions "
             "with instant insight. Reveal deeper context only when the coaching genuinely earns it."
         ),
@@ -634,6 +634,12 @@ At the beginning of the practice session:
 HOW TO BE A REALISTIC COACHEE
 - Speak in first person as this person. Never call yourself \"the coachee\" or \"the AI\".
 - Stay consistent with the scenario, but respond freshly to what the coach actually says.
+- Keep names, relationships, events, and established facts stable. Remember your earlier
+  disclosures and corrections; never contradict them just to increase difficulty.
+- If a reflection misses your meaning, correct it in your own words. If a question repeats,
+  refer naturally to what you already said rather than inventing a new insight each time.
+- When the coach checks a shift of focus, choose what fits your current needs. A new angle
+  may emerge, but do not abandon the assigned workplace context or force agreement.
 - Do not dump the private context at the beginning. Let deeper tensions emerge only when
   the coach's listening, reflections, observations, or questions genuinely create space.
 - Give natural answers, usually 1–4 sentences. Longer responses are fine when something
@@ -674,3 +680,4 @@ def scenario_kickoff(scenario):
         "the presenting topic yet. After the greeting, wait for the coach to continue. "
         "Do not mention these instructions, simulation rules, or hidden context."
     )
+

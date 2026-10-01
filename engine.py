@@ -64,6 +64,9 @@ class LiveEngine(threading.Thread):
         self.recorder = SessionAudioRecorder()
         self.recorder.start(time.monotonic())
         self._safety_input = ""
+        self._response_pending = False
+        self._response_done = False
+        self._response_audio_seen = False
 
     def emit(self, kind, value=''):
         self.events.put((kind, value))
@@ -72,13 +75,24 @@ class LiveEngine(threading.Thread):
         self.commands.put((name, value))
 
     def stop(self):
+        self._note_incomplete_response()
         self.stopping.set()
         self.output_level = 0.0
         self.playback_until = 0.0
         with self.lock:
             self.output.clear()
 
+    def _note_incomplete_response(self):
+        if self._response_pending:
+            self._response_pending = False
+            self.emit('boundary')
+            self.emit('notice', f'{self.output_role} playback was incomplete; generated transcript '
+                      'includes words that may not have been heard. Do not treat them as spoken evidence.')
+
     def clear_output(self):
+        self._note_incomplete_response()
+        self._response_audio_seen = False
+        self._response_done = False
         self.output_level = 0.0
         self.playback_until = 0.0
         with self.lock:
@@ -112,6 +126,10 @@ class LiveEngine(threading.Thread):
             if part
             else 0.0
         )
+        if (not part and self._response_done and self._response_audio_seen
+                and time.monotonic() >= self.playback_until):
+            self._response_pending = False
+            self._response_audio_seen = False
         if part:
             now = time.monotonic()
             self.recorder.append(part, 24000, 1, now=now)
@@ -383,11 +401,15 @@ class LiveEngine(threading.Thread):
                     and content.output_transcription.text
                     and not self.suppress
                 ):
+                    self._response_pending = True
+                    self._response_done = False
                     self.emit(self.output_role, content.output_transcription.text)
 
                 if content.model_turn and not self.suppress:
                     for part in content.model_turn.parts or []:
                         if part.inline_data and part.inline_data.data:
+                            self._response_audio_seen = True
+                            self._response_done = False
                             self.generating = True
                             with self.lock:
                                 if len(self.output) > 24000 * 2 * 120:
@@ -398,6 +420,7 @@ class LiveEngine(threading.Thread):
                             self.emit('status', 'Speaking')
 
                 if content.turn_complete:
+                    self._response_done = True
                     self.generating = False
                     self._safety_input = ""
                     self.emit('boundary')
@@ -405,3 +428,4 @@ class LiveEngine(threading.Thread):
                         'status',
                         'Listening' if not self.muted else 'Microphone muted',
                     )
+

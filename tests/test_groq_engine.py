@@ -4,7 +4,7 @@ import sys
 import types
 import unittest
 import wave
-from unittest.mock import Mock
+from unittest.mock import Mock, patch
 
 # Keep helper tests independent of local PortAudio installation.
 _fake_sounddevice = types.ModuleType("sounddevice")
@@ -22,6 +22,48 @@ finally:
 class GroqEngineHelperTests(unittest.TestCase):
     def make_engine(self):
         return GroqEngine("test-secret", "test-model", "troy", None, None, queue.Queue())
+
+
+    def test_failed_speech_marks_generated_reply_and_history_incomplete(self):
+        engine = self.make_engine()
+        engine.client = types.SimpleNamespace(chat=types.SimpleNamespace(completions=types.SimpleNamespace(
+            create=Mock(return_value=types.SimpleNamespace(choices=[types.SimpleNamespace(
+                message=types.SimpleNamespace(content="Generated answer"))])))))
+        engine._speak_chunk = Mock(return_value=False)
+        engine._respond_to_text("What matters?", True)
+        self.assertTrue(any(kind == "notice" and "playback was incomplete" in value
+                            for kind, value in list(engine.events.queue)))
+        self.assertIn("Playback incomplete", engine.messages[-1]["content"])
+
+    def test_interrupt_capture_keeps_correction_while_chat_call_returns(self):
+        engine = self.make_engine()
+        def create(**kwargs):
+            engine.command("interrupt")
+            with patch("groq_engine.time.monotonic", return_value=engine._interrupt_capture_after + 1):
+                engine.capture(b"\0\0" * 640, 640, None, None)
+            return types.SimpleNamespace(choices=[types.SimpleNamespace(message=types.SimpleNamespace(content="Late reply"))])
+        engine.client = types.SimpleNamespace(chat=types.SimpleNamespace(completions=types.SimpleNamespace(create=create)))
+        engine._respond_to_text("Original topic", True)
+        self.assertFalse(engine.audio_in.empty())
+        self.assertTrue(any(message["content"] == "Original topic" for message in engine.messages))
+
+    def test_mute_immediately_blocks_capture_after_interrupt(self):
+        engine = self.make_engine()
+        engine.generating = True
+        engine.interrupting.set()
+        engine.command("mute", True)
+        engine.capture(b"\0\0" * 640, 640, None, None)
+        self.assertTrue(engine.audio_in.empty())
+        self.assertFalse(engine.has_audio())
+
+    def test_long_session_keeps_opening_agreement_and_latest_corrections(self):
+        engine = self.make_engine()
+        engine.messages += [{"role": "user" if i % 2 == 0 else "assistant", "content": str(i)}
+                            for i in range(60)]
+        engine._trim_history()
+        self.assertEqual([message["content"] for message in engine.messages[1:7]], [str(i) for i in range(6)])
+        self.assertEqual(engine.messages[-1]["content"], "59")
+        self.assertLessEqual(len(engine.messages), 42)
 
     def test_split_for_tts_respects_orpheus_limit(self):
         text = (

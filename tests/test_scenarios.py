@@ -88,7 +88,7 @@ class ScenarioLibraryTests(unittest.TestCase):
         prompt = build_coachee_prompt(prepared)
 
         self.assertIn("Advanced:", prompt)
-        self.assertIn("more guarded, contradictory", prompt)
+        self.assertIn("Do not make every advanced client resistant", prompt)
         self.assertIn("Active Listening", prompt)
         self.assertIn("never mention that focus", prompt)
 
@@ -122,3 +122,4 @@ class ScenarioLibraryTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

@@ -12,6 +12,8 @@ from reviewer import (
     render_structured_review,
     should_try_review_fallback,
     transcript_for_review,
+    structured_model_output_to_text,
+    _words,
 )
 
 
@@ -79,6 +81,20 @@ def _acc_payload():
     }
 
 
+def _pcc_payload(level="PCC"):
+    return {
+        "level": level,
+        "competency_1": {"ethics": "NOT ASSESSABLE", "coaching_role": "NOT ASSESSABLE",
+                         "evidence": "Insufficient evidence", "citations": []},
+        "competency_2": {"status": "NOT_RATED_SINGLE_SESSION"},
+        "behaviors": [{"reference": f"C{i}", "rating": "NO OPPORTUNITY", "timestamps": [],
+                       "evidence": "No opportunity in this short excerpt", "citations": []}
+                      for i in range(3, 9)],
+        "practice_edges": [],
+        "bottom_line": "Insufficient evidence in this incomplete session.",
+    }
+
+
 class ReviewerMetricsTests(unittest.TestCase):
     def test_metrics_from_visible_transcript(self):
         rows = [
@@ -93,12 +109,89 @@ class ReviewerMetricsTests(unittest.TestCase):
 
         self.assertEqual(metrics.duration_seconds, 92)
         self.assertEqual(metrics.coach_turns, 2)
-        self.assertEqual(metrics.coachee_turns, 2)
+        self.assertEqual(metrics.coachee_turns, 1)
         self.assertEqual(metrics.coach_questions, 3)
         self.assertEqual(metrics.stacked_question_turns, 1)
         self.assertEqual(metrics.interruptions, 1)
         self.assertGreater(metrics.longest_coach_turn_words, 0)
         self.assertEqual(metrics.coach_share_pct + metrics.coachee_share_pct, 100)
+
+
+    def test_combining_marks_are_not_split_into_words(self):
+        self.assertEqual(len(_words("मुझे अपनी टीम पर भरोसा है")), 6)
+        self.assertEqual(_words("Cafe\u0301 isn't easy."), ["Café", "isn't", "easy"])
+
+    def test_short_pcc_and_mcc_reviews_need_no_invented_recommendations(self):
+        for level in ("PCC", "MCC"):
+            text = structured_model_output_to_text(json.dumps(_pcc_payload(level)), level,
+                                                  [("00:00:00", "Coach", "Hello")])
+            self.assertIn("Insufficient evidence", text)
+            self.assertIn("Competency 2 — Evidence strength: Not assessable", text)
+            self.assertNotIn("Competency 1 — Evidence strength: Developing", text)
+
+    def test_empty_invented_duplicate_and_wrong_level_behaviors_rejected(self):
+        for change in ("empty", "invented", "duplicate", "level"):
+            payload = _pcc_payload()
+            if change == "empty":
+                payload["behaviors"] = []
+            elif change == "invented":
+                payload["behaviors"][0]["reference"] = "FAKE"
+            elif change == "duplicate":
+                payload["behaviors"][-1] = dict(payload["behaviors"][0])
+            else:
+                payload["level"] = "MCC"
+            with self.subTest(change=change), self.assertRaises(ValueError):
+                parse_structured_review(json.dumps(payload), "PCC")
+
+    def test_citations_disambiguate_equal_timestamps_and_display_speaker(self):
+        payload = _pcc_payload()
+        payload["behaviors"][0].update(rating="OBSERVED", timestamps=["00:00:01"],
+            citations=[{"turn_id": "T0002", "quote": "What matters?"}])
+        rows = [("00:00:01", "Coachee", "I'm unsure"), ("00:00:01", "Coach", "What matters?")]
+        text = structured_model_output_to_text(json.dumps(payload), "PCC", rows)
+        self.assertIn("[T0002] Coach: “What matters?”", text)
+        payload["behaviors"][0]["citations"][0]["turn_id"] = "T0001"
+        with self.assertRaises(ValueError):
+            structured_model_output_to_text(json.dumps(payload), "PCC", rows)
+
+    def test_citations_reject_invented_quote_missing_turn_note_and_missing_evidence(self):
+        rows = [("00:00:01", "Coach", "What matters?"), ("00:00:02", "Session note", "What matters?")]
+        for citation in ({"turn_id": "T0001", "quote": "What is your goal?"},
+                         {"turn_id": "T0999", "quote": "What matters?"},
+                         {"turn_id": "T0002", "quote": "What matters?"}, None):
+            payload = _pcc_payload()
+            payload["behaviors"][0].update(rating="OBSERVED", timestamps=["00:00:01"],
+                                          citations=[citation] if citation else [])
+            with self.subTest(citation=citation), self.assertRaises(ValueError):
+                structured_model_output_to_text(json.dumps(payload), "PCC", rows)
+
+    def test_incomplete_playback_is_qualified_and_not_citable(self):
+        rows = [("00:00:01", "Coachee", "I will quit tomorrow"),
+                ("00:00:02", "Session note", "Coachee playback was incomplete; generated transcript includes words not heard.")]
+        self.assertIn("UNCONFIRMED PLAYBACK", transcript_for_review(rows))
+        metrics = calculate_metrics(rows, 5)
+        self.assertEqual(metrics.coachee_words, 0)
+        payload = _pcc_payload()
+        payload["behaviors"][0].update(rating="OBSERVED", timestamps=["00:00:01"],
+            citations=[{"turn_id": "T0001", "quote": "I will quit"}])
+        with self.assertRaises(ValueError):
+            structured_model_output_to_text(json.dumps(payload), "PCC", rows)
+
+    def test_malformed_collection_and_timestamp_types_rejected(self):
+        for key, value in (("practice_edges", ["invented edge"]), ("patterns", [{}])):
+            payload = _pcc_payload()
+            payload[key] = value
+            with self.assertRaises(ValueError):
+                parse_structured_review(json.dumps(payload), "PCC")
+        payload = _pcc_payload()
+        payload["behaviors"][0]["timestamps"] = "00:00:00"
+        with self.assertRaises(ValueError):
+            parse_structured_review(json.dumps(payload), "PCC")
+
+    def test_review_source_label_cannot_be_overridden_by_model(self):
+        payload = _pcc_payload()
+        payload["assessment_basis"] = "Official credential pass"
+        self.assertNotIn("Official credential pass", render_structured_review(payload, "PCC", "Verified source"))
 
     def test_duration_format(self):
         self.assertEqual(format_duration(92), "1:32")
@@ -216,7 +309,7 @@ class ReviewerMetricsTests(unittest.TestCase):
         self.assertIn("A3.1", text)
         self.assertIn("MEETS THE STANDARD", text)
         self.assertIn("COMPETENCY SYNTHESIS", text)
-        self.assertIn("THREE HIGH-LEVERAGE PRACTICE EDGES", text)
+        self.assertIn("HIGH-LEVERAGE PRACTICE EDGES", text)
         self.assertIn("BOTTOM LINE", text)
 
     def test_groq_has_dedicated_fast_review_model(self):
@@ -247,3 +340,4 @@ class ReviewerMetricsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

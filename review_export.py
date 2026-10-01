@@ -17,6 +17,7 @@ SECTION_HEADINGS = (
     "COMPETENCY SYNTHESIS",
     "PATTERNS TO WATCH",
     "THREE HIGH-LEVERAGE PRACTICE EDGES",
+    "HIGH-LEVERAGE PRACTICE EDGES",
     "MOMENTS WORTH REVISITING",
     "BOTTOM LINE",
 )
@@ -390,13 +391,19 @@ def _add_acc_behavior_table(doc: Document, rows: list[dict[str, str]]):
 def _add_annotated_transcript_table(doc: Document, transcript_rows, behavior_rows):
     """Create the review as an extension of the transcript itself."""
     visible_rows = [
-        row for row in (transcript_rows or [])
-        if len(row) >= 3 and row[1] in ("Coach", "Coachee")
+        (f"T{index:04d}", row) for index, row in enumerate(transcript_rows or [], 1)
+        if len(row) >= 3 and row[1] in ("Coach", "Coachee", "Session note")
     ]
 
     observations_by_stamp: dict[str, list[str]] = {}
+    observations_by_turn: dict[str, list[str]] = {}
     unmatched: list[dict[str, str]] = []
     for behavior in behavior_rows:
+        turn_ids = re.findall(r"\[(T\d{4,})\]", behavior.get("evidence", ""))
+        if turn_ids:
+            for turn_id in set(turn_ids):
+                observations_by_turn.setdefault(turn_id, []).append(_review_cell_text(behavior))
+            continue
         stamps = _timestamps(behavior.get("evidence", ""))
         if not stamps:
             unmatched.append(behavior)
@@ -420,13 +427,14 @@ def _add_annotated_transcript_table(doc: Document, transcript_rows, behavior_row
         run.bold = True
         run.font.size = Pt(8.5)
 
-    for stamp, role, transcript in visible_rows:
+    for turn_id, (stamp, role, transcript) in visible_rows:
         cells = table.add_row().cells
         values = (
             role,
             stamp,
             (transcript or "").strip(),
-            "\n\n".join(observations_by_stamp.get(stamp, [])),
+            "\n\n".join(observations_by_turn.get(turn_id, []) +
+                           (observations_by_stamp.get(stamp, []) if role != "Session note" else [])),
         )
         for idx, (value, width) in enumerate(zip(values, widths)):
             cells[idx].width = width
@@ -521,7 +529,8 @@ def export_review_docx(
     note = doc.add_paragraph()
     note_run = note.add_run(
         "Speaking share is estimated from transcript word count, not measured audio time. "
-        "Question counts depend on provider transcription punctuation."
+        "Question counts depend on provider transcription punctuation. "
+        "Entire turns with known incomplete AI playback are excluded from word/turn metrics."
     )
     note_run.italic = True
     note_run.font.size = Pt(8)
@@ -574,7 +583,8 @@ def export_review_docx(
 
     for heading in (
         "PATTERNS TO WATCH",
-        "THREE HIGH-LEVERAGE PRACTICE EDGES",
+        ("HIGH-LEVERAGE PRACTICE EDGES" if sections.get("HIGH-LEVERAGE PRACTICE EDGES")
+         else "THREE HIGH-LEVERAGE PRACTICE EDGES"),
         "MOMENTS WORTH REVISITING",
         "BOTTOM LINE",
     ):
@@ -599,3 +609,4 @@ def export_review_docx(
     run.font.size = Pt(8.5)
 
     doc.save(str(filename))
+

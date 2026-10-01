@@ -132,6 +132,8 @@ class GroqEngine(threading.Thread):
         self.stopping = threading.Event()
         self.interrupting = threading.Event()
         self._interrupt_token = 0
+        self._interrupt_capture_after = 0.0
+        self._response_pending = False
         self._next_tts_at = 0.0
         self.muted = False
         self.hold = False
@@ -147,18 +149,30 @@ class GroqEngine(threading.Thread):
         self.events.put((kind, value))
 
     def command(self, name, value=None):
+        if name == "mute":
+            # Capture runs independently while provider requests block this thread.
+            self.muted = bool(value)
         if name == "interrupt":
             # Incrementing a token lets blocking STT/LLM/TTS calls notice that an
             # interrupt happened while they were waiting for the provider.
             self._interrupt_token += 1
+            self._interrupt_capture_after = time.monotonic() + .15
             self.interrupting.set()
         self.commands.put((name, value))
 
     def stop(self):
+        self._note_incomplete_response()
         self.stopping.set()
         self.interrupting.set()
         self.output_level = 0.0
         self.playback_until = 0.0
+
+    def _note_incomplete_response(self):
+        if self._response_pending:
+            self._response_pending = False
+            self.emit("boundary")
+            self.emit("notice", f"{self.output_role} playback was incomplete; generated transcript "
+                      "includes words that may not have been heard. Do not treat them as spoken evidence.")
 
     def has_audio(self):
         return self.recorder.has_audio()
@@ -170,7 +184,10 @@ class GroqEngine(threading.Thread):
         return self.recorder.is_truncated()
 
     def capture(self, data, frames, timing, status):
-        if self.stopping.is_set() or self.muted or self.generating:
+        if self.stopping.is_set() or self.muted:
+            return
+        if self.generating and (not self.interrupting.is_set()
+                                or time.monotonic() < self._interrupt_capture_after):
             return
         pcm = bytes(data)
         self.recorder.append(pcm, 16000, 1, now=time.monotonic())
@@ -209,6 +226,7 @@ class GroqEngine(threading.Thread):
             detail = str(exc).replace(self.key, "[redacted]")
             self.emit("error", detail[:800])
         finally:
+            self._note_incomplete_response()
             self.output_level = 0.0
             self.playback_until = 0.0
             self.emit("disconnected")
@@ -314,13 +332,13 @@ class GroqEngine(threading.Thread):
                 self.stop()
                 return
             if self._interrupt_token != turn_token:
-                self.interrupting.clear()
                 self.emit("status", "Microphone muted" if self.muted else "Listening")
                 return
             self._generate_and_speak(text, interrupt_token=turn_token)
         finally:
             self.generating = False
-            self._drain_audio_queue()
+            if self._interrupt_token == turn_token:
+                self._drain_audio_queue()
 
     def _respond_to_text(self, text: str, visible_input: bool):
         if self.stopping.is_set():
@@ -343,7 +361,8 @@ class GroqEngine(threading.Thread):
             )
         finally:
             self.generating = False
-            self._drain_audio_queue()
+            if self._interrupt_token == turn_token:
+                self._drain_audio_queue()
 
     def _transcribe(self, pcm: bytes) -> str:
         wav_bytes = pcm_to_wav_bytes(pcm)
@@ -369,6 +388,9 @@ class GroqEngine(threading.Thread):
         self.emit("status", self.response_status)
         request_messages = list(self.messages)
         request_messages.append({"role": "user", "content": user_text})
+        if keep_user:
+            self.messages.append({"role": "user", "content": user_text})
+            self._trim_history()
         response = self.client.chat.completions.create(
             model=self.model,
             messages=request_messages,
@@ -381,7 +403,6 @@ class GroqEngine(threading.Thread):
         if self.stopping.is_set():
             return
         if self._interrupt_token != interrupt_token:
-            self.interrupting.clear()
             self.emit("status", "Microphone muted" if self.muted else "Listening")
             return
 
@@ -390,39 +411,44 @@ class GroqEngine(threading.Thread):
             self.emit("status", "Listening")
             return
 
-        if keep_user:
-            self.messages.append({"role": "user", "content": user_text})
         self.messages.append({"role": "assistant", "content": reply})
         self._trim_history()
 
         self.emit("boundary")
         self.emit(self.output_role, reply)
-        interrupted = False
-        for chunk in split_for_tts(reply):
-            if self.stopping.is_set() or self._interrupt_token != interrupt_token:
-                interrupted = True
-                break
-            if not self._speak_chunk(chunk, interrupt_token):
-                interrupted = self._interrupt_token != interrupt_token
-                break
-
-        self.output_level = 0.0
-        self.playback_until = 0.0
-        if interrupted and not self.stopping.is_set():
-            self.emit("boundary")
-            self.emit(
-                "notice",
-                f"{self.output_role} response was interrupted; its transcript may include words not played.",
-            )
-        if self._interrupt_token == interrupt_token:
-            self.interrupting.clear()
-            self.emit("status", "Microphone muted" if self.muted else "Listening")
+        self._response_pending = True
+        completed = False
+        try:
+            for chunk in split_for_tts(reply):
+                if self.stopping.is_set() or self._interrupt_token != interrupt_token:
+                    break
+                if not self._speak_chunk(chunk, interrupt_token):
+                    break
+            else:
+                completed = True
+        finally:
+            self.output_level = 0.0
+            self.playback_until = 0.0
+            if completed:
+                self._response_pending = False
+            else:
+                self._note_incomplete_response()
+                # The next turn must not assume the full generated reply was heard.
+                self.messages[-1]["content"] = reply + (
+                    "\n[Playback incomplete: the human may not have heard this whole reply. "
+                    "Ask what they heard rather than assuming understanding.]"
+                )
+            if self._interrupt_token == interrupt_token:
+                self.interrupting.clear()
+                self.emit("status", "Microphone muted" if self.muted else "Listening")
 
     def _trim_history(self):
         if len(self.messages) <= 42:
             return
         system = self.messages[0]
-        self.messages = [system] + self.messages[-40:]
+        # Preserve the opening agreement verbatim as well as recent corrections.
+        # Session-only history; no additional model calls or persistent memory.
+        self.messages = [system] + self.messages[1:7] + self.messages[-34:]
 
     @staticmethod
     def _is_rate_limit_error(exc: Exception) -> bool:
