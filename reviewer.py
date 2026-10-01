@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import json
 import re
+import unicodedata
 from dataclasses import dataclass
 from typing import Iterable
 
@@ -86,17 +87,47 @@ class SessionMetrics:
 
 
 def _words(text: str) -> list[str]:
-    return re.findall(r"\b[\w’'-]+\b", text or "", flags=re.UNICODE)
+    # Keep combining marks with their letters (e.g. Hindi and accented text).
+    tokens, current = [], []
+    for char in unicodedata.normalize("NFC", text or ""):
+        if unicodedata.category(char)[0] in "LNM" or char in "’'-":
+            current.append(char)
+        elif current:
+            token = "".join(current)
+            if any(ch.isalnum() for ch in token):
+                tokens.append(token)
+            current = []
+    if current and any(ch.isalnum() for ch in current):
+        tokens.append("".join(current))
+    return tokens
 
 
 def _question_count(text: str) -> int:
     return (text or "").count("?")
 
 
+def _unconfirmed_turn_ids(rows):
+    uncertain = set()
+    for index, (_, role, text) in enumerate(rows):
+        if role != "Session note" or not any(term in text.lower() for term in
+                ("playback was incomplete", "response was interrupted")):
+            continue
+        speaker = "Coachee" if text.startswith("Coachee") else "Coach" if text.startswith("Coach") else None
+        if speaker:
+            for previous in range(index - 1, -1, -1):
+                if rows[previous][1] == speaker:
+                    uncertain.add(f"T{previous + 1:04d}")
+                    break
+    return uncertain
+
+
 def calculate_metrics(rows: Iterable[tuple[str, str, str]], duration_seconds: float) -> SessionMetrics:
     rows = list(rows)
-    coach_rows = [text for _, role, text in rows if role == "Coach"]
-    coachee_rows = [text for _, role, text in rows if role == "Coachee"]
+    uncertain = _unconfirmed_turn_ids(rows)
+    coach_rows = [text for index, (_, role, text) in enumerate(rows, 1)
+                  if role == "Coach" and f"T{index:04d}" not in uncertain]
+    coachee_rows = [text for index, (_, role, text) in enumerate(rows, 1)
+                    if role == "Coachee" and f"T{index:04d}" not in uncertain]
 
     coach_word_counts = [len(_words(text)) for text in coach_rows]
     coachee_word_counts = [len(_words(text)) for text in coachee_rows]
@@ -138,11 +169,14 @@ def format_duration(seconds: int) -> str:
 
 
 def transcript_for_review(rows: Iterable[tuple[str, str, str]]) -> str:
+    rows = list(rows)
+    uncertain = _unconfirmed_turn_ids(rows)
     parts = []
-    for stamp, role, text in rows:
+    for index, (stamp, role, text) in enumerate(rows, 1):
         if role not in ("Coach", "Coachee", "Session note"):
             continue
-        parts.append(f"[{stamp}] {role}: {(text or '').strip()}")
+        qualification = " [UNCONFIRMED PLAYBACK — not citable as spoken evidence]" if f"T{index:04d}" in uncertain else ""
+        parts.append(f"[T{index:04d}] [{stamp}] {role}{qualification}: {(text or '').strip()}")
     return "\n\n".join(parts)
 
 
@@ -150,6 +184,10 @@ def _review_json_contract(level: str) -> str:
     acc_rule = """
 For PCC/MCC behavior items, use one of these current developmental statuses:
 OBSERVED, PARTIAL EVIDENCE, NOT OBSERVED, NO OPPORTUNITY, NOT ASSESSABLE.
+Use EXACTLY six behavior references once each: C3, C4, C5, C6, C7, C8.
+These are local competency grouping labels, not official ICF marker identifiers.
+For competency_1.ethics and coaching_role use the same developmental statuses.
+For competency_2.status use NOT_RATED_SINGLE_SESSION.
 """
     if level == "ACC":
         acc_rule = """
@@ -186,7 +224,7 @@ Keep evidence concise because Presence builds the final report locally.
   }},
   "behaviors": [
     {{
-      "reference": "A3.1 or concise competency/behavior reference",
+      "reference": "A3.1 for ACC; C3 for PCC/MCC",
       "name": "short behavior name",
       "rating": "allowed rating/status",
       "timestamps": ["00:00:34"],
@@ -235,10 +273,21 @@ Keep evidence concise because Presence builds the final report locally.
 }}
 
 Rules:
-- strengths: 2-4 items.
-- development_areas: 2-4 items when evidence supports them.
+- strengths: 0-4 items, only when supported.
+- development_areas: 0-4 items when evidence supports them.
 - patterns: at most 4.
-- practice_edges: exactly 3.
+- practice_edges: 0-3 objects with reference and text. Never manufacture three recommendations.
+- All referenced findings must use the required behavior references (or C1/C2 for competencies 1/2).
+- Add "citations": [{{"turn_id": "T0001", "quote": "short exact excerpt"}}] to
+  each behavior, strength, development area, moment, competency synthesis, and competency_1.
+  Cite exact excerpts from actual Coach/Coachee turns; never cite session notes as spoken evidence.
+  An observed/partial behavior, a strength, or a moment requires at least one citation.
+  Use [] for absent, unavailable, or insufficient evidence. Do not claim absence is a witnessed act.
+  Match each item's timestamps to its cited turns. Moments must match their cited turn timestamp.
+  Quotes must be exact substrings, not paraphrases; keep each excerpt under 120 characters.
+  A valid excerpt proves provenance, not that the interpretation is correct.
+- For a brief/incomplete session explicitly state insufficient evidence in bottom_line;
+  do not treat untested closing or reflection opportunities as failures.
 - moments: at most 3.
 - timestamps must exactly match transcript timestamps. Use [] when no exact timestamp supports an absence-based finding.
 - Do not invent tone, body language, energy, silence quality, or hidden context.
@@ -275,6 +324,10 @@ This is not an official ICF assessment, score, pass/fail result, or credential-r
 EVIDENCE BOUNDARY
 Use only the visible transcript and descriptive local metrics. Do not infer unavailable audio,
 nonverbal, emotional, or hidden-context evidence. Treat transcript punctuation as imperfect.
+Word shares are transcript token estimates, not measured speaking time. Entire turns with
+known incomplete AI playback are excluded conservatively from turn/word counts. Unspaced languages
+cannot be segmented reliably. Generated AI text may precede speaker playback. If notes
+identify incomplete playback, do not assume the client heard or responded to those words.
 When a behavior is absent, say what was not found rather than inventing a timestamp.
 
 LEVEL FRAMEWORK
@@ -324,11 +377,16 @@ def parse_structured_review(
     raw_text: str,
     level: str | None = None,
     allowed_timestamps: set[str] | None = None,
+    transcript_rows=None,
 ) -> dict:
     """Parse and validate structured model output."""
     data = json.loads(_extract_json_text(raw_text))
     if not isinstance(data, dict):
         raise ValueError("Structured review must be a JSON object.")
+
+    requested_level = (level or data.get("level", "")).upper()
+    if requested_level not in {"ACC", "PCC", "MCC"} or data.get("level") != requested_level:
+        raise ValueError("Structured review level must match the requested level.")
 
     behaviors = data.get("behaviors")
     if not isinstance(behaviors, list):
@@ -348,10 +406,9 @@ def parse_structured_review(
         elif not isinstance(value, list):
             raise ValueError(f"Structured review field '{key}' must be a list.")
 
-    if not isinstance(data.get("competency_1", {}), dict):
-        data["competency_1"] = {}
-    if not isinstance(data.get("competency_2", {}), dict):
-        data["competency_2"] = {}
+    for key in ("competency_1", "competency_2"):
+        if not isinstance(data.get(key), dict):
+            raise ValueError(f"Structured review field '{key}' must be an object.")
 
     if (level or data.get("level", "")).upper() == "ACC":
         by_reference = {}
@@ -403,8 +460,54 @@ def parse_structured_review(
                     + (rating or "blank")
                 )
 
-    if len(data.get("practice_edges", [])) != 3:
-        raise ValueError("Structured review must return exactly three practice edges.")
+    if requested_level != "ACC":
+        references = [item.get("reference") for item in behaviors]
+        if sorted(references, key=str) != ["C3", "C4", "C5", "C6", "C7", "C8"]:
+            raise ValueError("PCC/MCC review must cover C3 through C8 exactly once.")
+        for key in ("ethics", "coaching_role"):
+            if data["competency_1"].get(key) not in DEVELOPMENTAL_STATUSES:
+                raise ValueError("Competency 1 requires valid developmental statuses.")
+        if data["competency_2"].get("status") != "NOT_RATED_SINGLE_SESSION":
+            raise ValueError("Competency 2 must be NOT_RATED_SINGLE_SESSION.")
+
+    allowed_refs = set(ACC_BEHAVIOR_IDS if requested_level == "ACC" else
+                       ("C3", "C4", "C5", "C6", "C7", "C8")) | {"C1", "C2"}
+    for key in ("behaviors", "strengths", "development_areas", "practice_edges", "moments",
+                "competency_synthesis"):
+        for item in data[key]:
+            if not isinstance(item, dict):
+                raise ValueError(f"Every '{key}' item must be an object.")
+            if key != "competency_synthesis" and item.get("reference") not in allowed_refs:
+                raise ValueError(f"Unknown review reference in '{key}'.")
+            for field in ("name", "rating", "evidence", "development", "text", "competency",
+                          "strength", "what_happened", "alternative", "timestamp"):
+                if field in item and not isinstance(item[field], str):
+                    raise ValueError(f"Review '{field}' must be text.")
+    for item in data["competency_synthesis"]:
+        if not re.match(r"^Competency [3-8](?:\b)", item.get("competency", "")):
+            raise ValueError("Synthesis must identify a competency from 3 through 8.")
+        if item.get("strength") not in {"Strong", "Developing", "Limited evidence", "Not assessable"}:
+            raise ValueError("Invalid synthesis evidence strength.")
+    for key in ("competency_1", "competency_2"):
+        for field, value in data[key].items():
+            if field != "citations" and not isinstance(value, str):
+                raise ValueError(f"Review '{key}.{field}' must be text.")
+    for key in ("behaviors", "strengths", "development_areas"):
+        for item in data[key]:
+            stamps = item.get("timestamps", [])
+            if not isinstance(stamps, list) or any(not isinstance(stamp, str) for stamp in stamps):
+                raise ValueError("Finding timestamps must be a list of strings.")
+    for key, limit in (("practice_edges", 3), ("strengths", 4), ("development_areas", 4),
+                       ("patterns", 4), ("moments", 3)):
+        if len(data[key]) > limit:
+            raise ValueError(f"Too many '{key}' items.")
+    if any(not isinstance(item, str) for item in data["patterns"]):
+        raise ValueError("Patterns must be text.")
+    for key in ("assessment_basis", "bottom_line"):
+        if key in data and not isinstance(data[key], str):
+            raise ValueError(f"Review '{key}' must be text.")
+    if transcript_rows is not None:
+        _validate_citations(data, transcript_rows)
 
     if allowed_timestamps is not None:
         timestamp_fields = []
@@ -430,15 +533,64 @@ def parse_structured_review(
     return data
 
 
+
+def _validate_citations(data, rows):
+    rows = list(rows)
+    uncertain = _unconfirmed_turn_ids(rows)
+    turns = {f"T{index:04d}": (stamp, role, text)
+             for index, (stamp, role, text) in enumerate(rows, 1)}
+    groups = [(key, item) for key in ("behaviors", "strengths", "development_areas", "moments",
+                                    "competency_synthesis") for item in data[key]]
+    groups.append(("competency_1", data["competency_1"]))
+    for key, item in groups:
+        citations = item.get("citations")
+        if not isinstance(citations, list):
+            raise ValueError(f"Review '{key}' must include citations.")
+        stamps = set()
+        for citation in citations:
+            if not isinstance(citation, dict):
+                raise ValueError("Citation must be an object.")
+            turn_id = citation.get("turn_id")
+            if not isinstance(turn_id, str) or turn_id in uncertain:
+                raise ValueError("Citation cannot use an invalid turn or a turn with known incomplete playback.")
+            turn = turns.get(turn_id)
+            quote = citation.get("quote")
+            if (not turn or turn[1] not in {"Coach", "Coachee"} or not isinstance(quote, str)
+                    or not quote.strip() or len(quote) > 120 or quote not in turn[2]):
+                raise ValueError("Citation must quote an exact excerpt from an identified speaker turn.")
+            stamps.add(turn[0])
+            citation["speaker"] = turn[1]
+            citation["timestamp"] = turn[0]
+        positive = item.get("rating") in {"OBSERVED", "PARTIAL EVIDENCE", "MEETS THE STANDARD",
+                                          "EXCEEDS THE STANDARD"}
+        if key == "competency_1":
+            positive = any(item.get(field) in {"OBSERVED", "PARTIAL EVIDENCE"}
+                           for field in ("ethics", "coaching_role"))
+        if key == "competency_synthesis":
+            positive = item.get("strength") in {"Strong", "Developing"}
+        if (key in {"strengths", "moments"} or positive) and not citations:
+            raise ValueError("Observed findings require supporting turn citations.")
+        if key in {"behaviors", "strengths", "development_areas"}:
+            if set(item.get("timestamps", [])) != stamps:
+                raise ValueError("Finding timestamps must match its cited turns.")
+        if key == "moments" and item.get("timestamp") not in stamps:
+            raise ValueError("Moment timestamp must match its cited turn.")
+
+
 def _stamp_text(values) -> str:
     stamps = [str(item).strip() for item in (values or []) if str(item).strip()]
     return ", ".join(f"[{stamp}]" for stamp in stamps)
 
 
+def _citation_text(item):
+    return " ".join(f"[{c['turn_id']}] {c.get('speaker', '')}: “{c['quote']}”"
+                    for c in item.get("citations", []))
+
+
 def _bullet_reference(item: dict) -> str:
     reference = str(item.get("reference", "")).strip()
     stamp_text = _stamp_text(item.get("timestamps", []))
-    text = str(item.get("text", "")).strip()
+    text = " ".join(part for part in (str(item.get("text", "")).strip(), _citation_text(item)) if part)
     prefix = " - ".join(part for part in (reference, stamp_text) if part)
     return f"- {prefix}: {text}" if prefix else f"- {text}"
 
@@ -448,7 +600,7 @@ def render_structured_review(data: dict, level: str, source_name: str) -> str:
     level = (level or data.get("level") or "PCC").upper()
     lines = [
         f"DEVELOPMENTAL REVIEW — {level}",
-        f"ASSESSMENT BASIS: {data.get('assessment_basis') or source_name}",
+        f"ASSESSMENT BASIS: {source_name}",
         "",
         "WHAT THE COACH DID WELL",
     ]
@@ -482,7 +634,7 @@ def render_structured_review(data: dict, level: str, source_name: str) -> str:
         stamp_text = _stamp_text(item.get("timestamps", []))
         evidence = str(item.get("evidence", "")).strip()
         evidence_text = " ".join(part for part in (stamp_text, evidence) if part)
-        lines.append(f"Evidence: {evidence_text}".rstrip())
+        lines.append(f"Evidence: {evidence_text} {_citation_text(item)}".rstrip())
         development = str(item.get("development", "")).strip()
         if development:
             lines.append(f"Development note: {development}")
@@ -493,7 +645,7 @@ def render_structured_review(data: dict, level: str, source_name: str) -> str:
     if level == "ACC":
         ethics = c1.get("ethics", "")
         role = c1.get("coaching_role", "")
-        evidence = str(c1.get("evidence", "")).strip()
+        evidence = " ".join(part for part in (str(c1.get("evidence", "")).strip(), _citation_text(c1)) if part)
         lines.append(f"Competency 1 — Evidence strength: {ethics or 'Not assessable'}")
         lines.append(
             f"Observed evidence: Q1 Ethics {ethics or 'N/A'}; "
@@ -512,13 +664,19 @@ def render_structured_review(data: dict, level: str, source_name: str) -> str:
             "Development opportunity: Evaluate this competency across the coach's broader professional practice."
         )
     else:
-        c1_evidence = str(c1.get("evidence", "")).strip()
+        c1_evidence = " ".join(part for part in (str(c1.get("evidence", "")).strip(), _citation_text(c1)) if part)
         if c1_evidence:
-            lines.append("Competency 1 — Evidence strength: Developing")
+            lines.append("Competency 1 — Evidence strength: Session evidence only")
+            lines.append(f"Ethics: {c1.get('ethics', 'NOT ASSESSABLE')}; "
+                         f"Coaching role: {c1.get('coaching_role', 'NOT ASSESSABLE')}")
             lines.append(f"Observed evidence: {c1_evidence}")
             lines.append(
                 "Development opportunity: Continue monitoring ethical role clarity across practice."
             )
+
+    if level != "ACC":
+        lines.append("Competency 2 — Evidence strength: Not assessable")
+        lines.append("Observed evidence: Not rated from a single session.")
 
     for item in data.get("competency_synthesis", []):
         if not isinstance(item, dict):
@@ -531,7 +689,7 @@ def render_structured_review(data: dict, level: str, source_name: str) -> str:
             lines.append(
                 f"{competency} — Evidence strength: {strength or 'Limited evidence'}"
             )
-            lines.append(f"Observed evidence: {evidence}")
+            lines.append(f"Observed evidence: {evidence} {_citation_text(item)}".rstrip())
             if development:
                 lines.append(f"Development opportunity: {development}")
 
@@ -542,7 +700,9 @@ def render_structured_review(data: dict, level: str, source_name: str) -> str:
         if str(item).strip()
     )
 
-    lines.extend(["", "THREE HIGH-LEVERAGE PRACTICE EDGES"])
+    lines.extend(["", "HIGH-LEVERAGE PRACTICE EDGES"])
+    if not data.get("practice_edges"):
+        lines.append("- Insufficient evidence for a specific practice recommendation.")
     for item in data.get("practice_edges", []):
         if isinstance(item, dict):
             reference = str(item.get("reference", "")).strip()
@@ -564,7 +724,7 @@ def render_structured_review(data: dict, level: str, source_name: str) -> str:
             for part in (f"[{timestamp}]" if timestamp else "", reference)
             if part
         )
-        text = f"{prefix} {happened}".strip()
+        text = f"{prefix} {happened} {_citation_text(item)}".strip()
         if alternative:
             text += f" Alternative: {alternative}"
         lines.append(f"- {text}")
@@ -573,12 +733,14 @@ def render_structured_review(data: dict, level: str, source_name: str) -> str:
     bottom = str(data.get("bottom_line", "")).strip()
     if bottom:
         lines.append(bottom)
+    lines.append("Excerpt matching verifies the source turn; coaching interpretations still require human judgment.")
     lines.append("Developmental AI review only — not an official ICF assessment.")
     return "\n".join(lines).strip()
 
 
 def structured_model_output_to_text(raw_text: str, level: str, rows=None) -> str:
     source_name, _ = get_review_criteria(level)
+    rows = list(rows) if rows is not None else None
     allowed_timestamps = None
     if rows is not None:
         allowed_timestamps = {
@@ -586,7 +748,7 @@ def structured_model_output_to_text(raw_text: str, level: str, rows=None) -> str
             for stamp, role, _ in rows
             if role in ("Coach", "Coachee", "Session note") and str(stamp).strip()
         }
-    data = parse_structured_review(raw_text, level, allowed_timestamps)
+    data = parse_structured_review(raw_text, level, allowed_timestamps, rows)
     return render_structured_review(data, level, source_name)
 
 
@@ -606,7 +768,7 @@ def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, sce
                     config={
                         "response_mime_type": "application/json",
                         "temperature": 0.1,
-                        "max_output_tokens": 3800,
+                        "max_output_tokens": 6500,
                     },
                 )
                 raw = (getattr(response, "text", None) or "").strip()
@@ -628,3 +790,4 @@ def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, sce
             client.close()
         except Exception:
             pass
+
