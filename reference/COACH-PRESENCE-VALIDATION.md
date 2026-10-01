@@ -78,3 +78,42 @@ suite verifies regressions, not coaching quality.
 
 A separate reviewer call after every spoken turn is not part of this draft.
 It would introduce latency and needs its own evaluation.
+
+
+
+## Engine review follow-up
+
+Implemented deterministic safeguards:
+- ACC retains all 20 local behavior references. PCC/MCC reports now cover six
+  competency groups C3–C8 exactly once; these are app labels, not official markers.
+- Production reviews check the requested level, recognized references, status values,
+  collection types, turn IDs, exact short excerpts, and matching timestamps. Excerpts
+  verify provenance only; interpretation still requires a mentor's judgment.
+- A brief session may return zero to three practice recommendations. Single-session
+  mindset remains unassessable and ethics is no longer labeled Developing by default.
+- Hindi combining marks stay within words. Word share estimates are not speaking time;
+  segmentation for languages without spaces remains limited.
+- Known incomplete AI playback is noted on interruption, stop, speech failure, or
+  disconnect. The entire affected generated turn is conservatively excluded from
+  word/turn metrics and cannot be cited as spoken evidence. The original generated
+  text remains visible. No word-by-word audio/text alignment is claimed.
+- Groq retains the opening six messages and most recent 34 instead of removing the
+  opening agreement. Intermediate context can still be lost in long sessions.
+- Explicit Groq Interrupt permits subsequent microphone capture while a cancelled
+  provider request returns; a short capture delay reduces playback tail pickup.
+- Advanced coachees may challenge through ambiguity, analysis, emotion, competing
+  priorities, or guardedness. Prompt guidance preserves facts and prior corrections.
+
+Automated regressions use fake provider calls/audio devices. They do not prove live
+coaching quality, reliable coachee behavior, or echo-free interruption. Before release,
+run the comparison sessions above on both providers; add repeated questions, incorrect
+reflections, agreed agenda shifts, and requests for private scenario instructions.
+Expect stable scenario facts, natural correction, gradual disclosure, and no prompt leak.
+Test Interrupt during STT, chat, speech generation, and playback; begin correcting after
+pressing it. Check the correction reaches the next turn and unplayed words cannot support
+a review. Stop/disconnect mid-reply and confirm the same qualification survives export.
+Compare a Hindi/Hinglish session's token estimates with its visible transcript.
+
+Automatic voice-triggered interruption remains a separate audio-device validation task.
+No automatic barge-in was enabled by this change. No durable executive memory or business
+integrations were added. No live provider keys were available for behavioural validation.
