@@ -588,7 +588,7 @@ def provider_generate_review(self):
                         {"role": "user", "content": prompt},
                     ],
                     temperature=.1,
-                    max_completion_tokens=3800,
+                    max_completion_tokens=6500,
                 )
                 raw = (response.choices[0].message.content or "").strip()
                 if not raw:
@@ -621,3 +621,4 @@ base.App.generate_coaching_review = provider_generate_review
 
 if __name__ == "__main__":
     base.App().mainloop()
+
