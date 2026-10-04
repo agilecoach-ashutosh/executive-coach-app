@@ -488,6 +488,7 @@ def generate_coaching_review(self):
         self,
         f"Reviewing this transcript against the {level} developmental lens…\n\n"
         "Presence is asking the reviewer for compact structured findings, then it will build the readable review locally. "
+        "If Gemini is temporarily busy, Presence retries once and tries the other Gemini review models. "
         "Longer transcripts and deeper evidence checks can still take a little time.",
     )
 

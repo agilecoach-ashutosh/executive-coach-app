@@ -1,5 +1,9 @@
 import json
 import unittest
+from unittest.mock import Mock, patch
+
+import reviewer
+import httpx
 
 from review_criteria import get_review_criteria
 from reviewer import (
@@ -96,6 +100,72 @@ def _pcc_payload(level="PCC"):
 
 
 class ReviewerMetricsTests(unittest.TestCase):
+    def test_real_sdk_retries_busy_model_then_falls_back(self):
+        real_client = reviewer.genai.Client
+        requests = []
+
+        def handle(request):
+            requests.append(request.url.path)
+            if len(requests) <= 2:
+                return httpx.Response(503, json={"error": {"code": 503, "status": "UNAVAILABLE", "message": "high demand"}})
+            return httpx.Response(200, json={"candidates": [{"content": {"role": "model", "parts": [{"text": json.dumps(_pcc_payload())}]}, "finishReason": "STOP"}]})
+
+        def factory(**kwargs):
+            options = kwargs["http_options"]
+            options.httpx_client = httpx.Client(transport=httpx.MockTransport(handle))
+            options.async_client_args = {"trust_env": False}
+            return real_client(**kwargs)
+
+        rows = [("00:00:00", "Coach", "Hello")]
+        with patch.object(reviewer.genai, "Client", side_effect=factory):
+            result = reviewer.generate_review("test-key", "PCC", rows, calculate_metrics(rows, 1))
+        self.assertIn("DEVELOPMENTAL REVIEW", result)
+        self.assertEqual(len(requests), 3)
+        self.assertIn(reviewer.REVIEW_MODELS[0], requests[0])
+        self.assertEqual(requests[0], requests[1])
+        self.assertIn(reviewer.REVIEW_MODELS[1], requests[2])
+
+    def test_gemini_overload_allows_model_fallback(self):
+        self.assertTrue(should_try_review_fallback(RuntimeError("503 UNAVAILABLE: high demand"), "Google Gemini"))
+        self.assertFalse(should_try_review_fallback(RuntimeError("503 Service Unavailable"), "Groq"))
+
+    def test_gemini_busy_primary_recovers_on_next_model(self):
+        rows = [("00:00:00", "Coach", "Hello")]
+        client = Mock()
+        client.models.generate_content.side_effect = [
+            RuntimeError("503 UNAVAILABLE: high demand"),
+            Mock(text=json.dumps(_pcc_payload())),
+        ]
+        with patch.object(reviewer.genai, "Client", return_value=client) as factory:
+            result = reviewer.generate_review("test-key", "PCC", rows, calculate_metrics(rows, 1))
+        self.assertIn("DEVELOPMENTAL REVIEW", result)
+        self.assertEqual([call.kwargs["model"] for call in client.models.generate_content.call_args_list], list(reviewer.REVIEW_MODELS[:2]))
+        options = factory.call_args.kwargs["http_options"]
+        self.assertEqual(options.retry_options.attempts, 2)
+        self.assertEqual(options.retry_options.http_status_codes, [500, 502, 503, 504])
+        self.assertNotIn(429, options.retry_options.http_status_codes)
+        client.close.assert_called_once()
+
+    def test_gemini_busy_all_models_fails_cleanly_and_preserves_rows(self):
+        rows = [("00:00:00", "Coach", "Hello")]
+        client = Mock()
+        client.models.generate_content.side_effect = RuntimeError("503 Service Unavailable")
+        with patch.object(reviewer.genai, "Client", return_value=client), self.assertRaisesRegex(RuntimeError, "could not be generated"):
+            reviewer.generate_review("test-key", "PCC", rows, calculate_metrics(rows, 1))
+        self.assertEqual(client.models.generate_content.call_count, len(reviewer.REVIEW_MODELS))
+        self.assertEqual(rows, [("00:00:00", "Coach", "Hello")])
+        client.close.assert_called_once()
+
+    def test_gemini_nonrecoverable_errors_do_not_try_another_model(self):
+        rows = [("00:00:00", "Coach", "Hello")]
+        for error in ("429 quota exceeded", "401 invalid api key", "403 forbidden", "connection timed out", "network unreachable"):
+            client = Mock()
+            client.models.generate_content.side_effect = RuntimeError(error)
+            with self.subTest(error=error), patch.object(reviewer.genai, "Client", return_value=client), self.assertRaises(RuntimeError):
+                reviewer.generate_review("test-key", "PCC", rows, calculate_metrics(rows, 1))
+            client.models.generate_content.assert_called_once()
+            client.close.assert_called_once()
+
     def test_case_and_whitespace_cannot_bypass_positive_evidence_checks(self):
         rows = [("00:00:15", "Coach", "What matters?")]
         for level in ("ACC", "PCC", "MCC"):
