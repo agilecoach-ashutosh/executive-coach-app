@@ -577,6 +577,11 @@ def practice_start(self):
     if not self.confirm_unsaved():
         return
 
+    # Only discard the prior review once validation and user cancellation pass.
+    if hasattr(self, '_review_queue'):
+        from practice_review import _clear_review_state
+        _clear_review_state(self)
+
     if self.remember.get():
         try:
             base.keyring.set_password('PresenceCoach', 'gemini', self.key.get().strip())

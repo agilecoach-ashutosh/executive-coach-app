@@ -96,6 +96,28 @@ def _pcc_payload(level="PCC"):
 
 
 class ReviewerMetricsTests(unittest.TestCase):
+    def test_case_and_whitespace_cannot_bypass_positive_evidence_checks(self):
+        rows = [("00:00:15", "Coach", "What matters?")]
+        for level in ("ACC", "PCC", "MCC"):
+            for rating in ("observed", " OBSERVED ") if level != "ACC" else ("meets the standard", " MEETS THE STANDARD "):
+                payload = _acc_payload() if level == "ACC" else _pcc_payload(level)
+                payload.update(strengths=[], moments=[], competency_synthesis=[], development_areas=[])
+                payload["competency_1"].update(ethics="NOT OBSERVED" if level == "ACC" else "NOT ASSESSABLE",
+                    coaching_role="NOT OBSERVED" if level == "ACC" else "NOT ASSESSABLE", citations=[])
+                for item in payload["behaviors"]:
+                    item.update(rating=rating, timestamps=[], citations=[])
+                with self.subTest(level=level, rating=rating), self.assertRaisesRegex(ValueError, "supporting turn citations"):
+                    parse_structured_review(json.dumps(payload), level, transcript_rows=rows)
+
+    def test_acc_lowercase_ethics_requires_citations(self):
+        payload = _acc_payload()
+        payload.update(strengths=[], moments=[], competency_synthesis=[], development_areas=[])
+        for item in payload["behaviors"]:
+            item.update(rating="N/A", timestamps=[], citations=[])
+        payload["competency_1"].update(ethics="observed", coaching_role="not observed", citations=[])
+        with self.assertRaisesRegex(ValueError, "supporting turn citations"):
+            parse_structured_review(json.dumps(payload), "ACC", transcript_rows=[("00:00:15", "Coach", "Hello")])
+
     def test_metrics_from_visible_transcript(self):
         rows = [
             ("00:00:00", "Coachee", "I feel stuck and I am not sure what I want."),
@@ -340,4 +362,3 @@ class ReviewerMetricsTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
-

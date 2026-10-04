@@ -435,12 +435,14 @@ def parse_structured_review(
                 raise ValueError(
                     f"ACC behavior {reference} returned an invalid rating: {rating or 'blank'}"
                 )
+            by_reference[reference]["rating"] = rating
 
         c1 = data["competency_1"]
         for key in ("ethics", "coaching_role"):
             status = str(c1.get(key, "")).strip().upper()
             if status not in {"OBSERVED", "NOT OBSERVED"}:
                 raise ValueError(f"ACC Competency 1 {key} must be OBSERVED or NOT OBSERVED.")
+            c1[key] = status
 
         c2_status = str(data["competency_2"].get("status", "")).strip().upper()
         if c2_status != "NOT_RATED_SINGLE_SESSION":
@@ -459,6 +461,7 @@ def parse_structured_review(
                     "PCC/MCC behavior returned an invalid developmental status: "
                     + (rating or "blank")
                 )
+            item["rating"] = rating
 
     if requested_level != "ACC":
         references = [item.get("reference") for item in behaviors]
@@ -790,4 +793,3 @@ def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, sce
             client.close()
         except Exception:
             pass
-

@@ -242,6 +242,7 @@ def confirm_unsaved_with_export_guard(self):
 
 def export_coaching_review_word(self):
     if (not getattr(self, "practice_review_text", "") or
+            not getattr(self, "_review_snapshot", None) or
             getattr(self, "practice_review_generated_level", None) != self.practice_review_level.get().upper()):
         messagebox.showinfo("Review", "Generate a coaching review first.")
         return False
@@ -258,14 +259,14 @@ def export_coaching_review_word(self):
         return False
 
     try:
-        metrics = review._current_metrics(self)
+        snapshot = self._review_snapshot
         export_review_docx(
             self.practice_review_text,
             filename,
             level,
-            metrics,
-            getattr(self, "current_scenario", None),
-            list(self.transcript.rows),
+            snapshot["metrics"],
+            snapshot["scenario"],
+            snapshot["rows"],
         )
     except Exception as exc:
         issue = classify_export_error(exc, artifact="coaching review")
