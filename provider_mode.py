@@ -10,6 +10,7 @@ import time
 import tkinter as tk
 import webbrowser
 from tkinter import messagebox, ttk
+from ui_helpers import fit_window
 
 from groq import Groq
 
@@ -165,7 +166,7 @@ def _inject_provider_settings(self):
         selectcolor=base.SURFACE,
         activebackground=base.PANEL,
         activeforeground=base.INK,
-        font=("Segoe UI", 8),
+        font=("Segoe UI", 10),
     ).pack(anchor="w")
     self.button(
         groq_card,
@@ -298,7 +299,7 @@ def provider_api_help(self):
     dialog = tk.Toplevel(parent)
     dialog.title("Connect Presence to an AI provider")
     dialog.configure(bg=base.BG)
-    dialog.geometry("650x720")
+    fit_window(dialog, 700, 740, minimum=(620, 520))
     dialog.resizable(False, False)
     dialog.transient(parent)
 
@@ -342,7 +343,7 @@ def provider_api_help(self):
                 width=2,
                 bg=base.SURFACE_2,
                 fg=accent,
-                font=("Segoe UI", 8, "bold"),
+                font=("Segoe UI", 10, "bold"),
             ).pack(side="left", padx=(0, 8))
             self.label(row, text, 9, base.INK).pack(side="left")
         self.button(
@@ -562,49 +563,61 @@ def provider_generate_review(self):
     )
 
     def worker():
-        client = Groq(
-            api_key=key,
-            timeout=REQUEST_TIMEOUT_SECONDS,
-            max_retries=1,
-        )
-        errors = []
-        models = [FAST_GROQ_REVIEW_MODEL]
-        if conversation_model not in models:
-            models.append(conversation_model)
+        client = None
+        try:
+            client = Groq(
+                api_key=key,
+                timeout=REQUEST_TIMEOUT_SECONDS,
+                max_retries=1,
+            )
+            errors = []
+            models = [FAST_GROQ_REVIEW_MODEL]
+            if conversation_model not in models:
+                models.append(conversation_model)
 
-        for model in models:
-            try:
-                response = client.chat.completions.create(
-                    model=model,
-                    messages=[
-                        {
-                            "role": "system",
-                            "content": (
-                                "You are a rigorous developmental reviewer of professional coaching practice. "
-                                "Return only the JSON object requested by the user prompt."
-                            ),
-                        },
-                        {"role": "user", "content": prompt},
-                    ],
-                    temperature=.1,
-                    max_completion_tokens=6500,
-                )
-                raw = (response.choices[0].message.content or "").strip()
-                if not raw:
-                    raise RuntimeError("returned no text")
-                text = structured_model_output_to_text(raw, level, rows)
-                self._review_queue.put((generation, "ok", text))
-                return
-            except Exception as exc:
-                errors.append(f"{model}: {exc}")
-                if not should_try_review_fallback(exc, GROQ):
-                    break
+            for model in models:
+                try:
+                    self._review_queue.put((generation, "progress", "Reviewing transcript" if not errors else "Trying another Groq review model"))
+                    response = client.chat.completions.create(
+                        model=model,
+                        messages=[
+                            {
+                                "role": "system",
+                                "content": (
+                                    "You are a rigorous developmental reviewer of professional coaching practice. "
+                                    "Return only the JSON object requested by the user prompt."
+                                ),
+                            },
+                            {"role": "user", "content": prompt},
+                        ],
+                        temperature=.1,
+                        max_completion_tokens=6500,
+                    )
+                    raw = (response.choices[0].message.content or "").strip()
+                    if not raw:
+                        raise RuntimeError("returned no text")
+                    self._review_queue.put((generation, "progress", "Checking evidence and building report"))
+                    text = structured_model_output_to_text(raw, level, rows)
+                    self._review_queue.put((generation, "ok", text))
+                    return
+                except Exception as exc:
+                    errors.append(f"{model}: {exc}")
+                    if not should_try_review_fallback(exc, GROQ):
+                        break
 
-        self._review_queue.put((
-            generation,
-            "error",
-            "Groq coaching review could not be generated.\n\n" + "\n\n".join(errors[-2:]),
-        ))
+            self._review_queue.put((
+                generation,
+                "error",
+                "Groq coaching review could not be generated.\n\n" + "\n\n".join(errors[-2:]),
+            ))
+        except Exception as exc:
+            self._review_queue.put((generation, "error", str(exc)))
+        finally:
+            if client is not None:
+                try:
+                    client.close()
+                except Exception:
+                    pass
 
     threading.Thread(target=worker, daemon=True).start()
     self.after(120, self._poll_review_result)

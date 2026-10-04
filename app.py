@@ -9,6 +9,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 import keyring
+from ui_helpers import fit_window, tooltip
 import sounddevice as sd
 
 from coaching import IMMINENT_DANGER_RESPONSE, Transcript, detects_imminent_danger
@@ -24,7 +25,7 @@ AMBER = '#ffb454'
 AMBER_SOFT = '#d89243'
 CYAN = '#66d9ef'
 INK = '#eef5ff'
-MUTED = '#7f92aa'
+MUTED = '#a8b8cc'
 DANGER = '#ff7d7d'
 
 PARTICLE_COUNT = 180
@@ -74,8 +75,7 @@ class App(tk.Tk):
     def __init__(self):
         super().__init__()
         self.title('Presence Coach • A space to think')
-        self.geometry('1360x840')
-        self.minsize(1100, 720)
+        fit_window(self, 1360, 840, minimum=(1000, 640))
         self.configure(bg=BG)
 
         self.events, self.engine = queue.Queue(), None
@@ -129,6 +129,16 @@ class App(tk.Tk):
             style.theme_use('clam')
         except tk.TclError:
             pass
+        style.configure('Presence.TNotebook', background=PANEL, borderwidth=0)
+        style.configure('Presence.TNotebook.Tab', background=SURFACE_2, foreground=INK,
+                        padding=(14, 9), font=('Segoe UI', 10, 'bold'))
+        style.map('Presence.TNotebook.Tab', background=[('selected', PANEL)],
+                  foreground=[('selected', AMBER)])
+        style.configure('Treeview', background=PANEL, fieldbackground=PANEL, foreground=INK,
+                        rowheight=32, font=('Segoe UI', 10))
+        style.configure('Treeview.Heading', background=SURFACE_2, foreground=INK,
+                        font=('Segoe UI', 10, 'bold'))
+        style.map('Treeview', background=[('selected', '#24405c')], foreground=[('selected', INK)])
         style.configure(
             'Presence.TEntry',
             fieldbackground=SURFACE_2,
@@ -188,7 +198,7 @@ class App(tk.Tk):
                 darkcolor=background,
                 relief='flat',
                 padding=padding,
-                font=('Segoe UI', size, 'bold'),
+                font=('Segoe UI', max(10, size), 'bold'),
                 focusthickness=1,
                 focuscolor=AMBER_SOFT,
             )
@@ -206,7 +216,7 @@ class App(tk.Tk):
         return tk.Label(
             parent,
             text=text,
-            font=('Segoe UI', size, weight),
+            font=('Segoe UI', max(10, size), weight),
             bg=parent['bg'],
             fg=color,
         )
@@ -230,7 +240,7 @@ class App(tk.Tk):
 
     def make_ui(self):
         self.columnconfigure(0, weight=1)
-        self.rowconfigure(1, weight=1)
+        self.rowconfigure(2, weight=1)
 
         self.header = tk.Frame(self, bg=BG, height=68)
         self.header.grid(row=0, column=0, sticky='ew', padx=24, pady=(14, 8))
@@ -248,23 +258,28 @@ class App(tk.Tk):
             textvariable=self.connection_state,
             bg=BG,
             fg=MUTED,
-            font=('Segoe UI', 9, 'bold'),
+            font=('Segoe UI', 10, 'bold'),
         ).pack(side='left', padx=(0, 12))
         self.focus_button = self.button(actions, 'Focus', self.toggle_focus, compact=True)
         self.focus_button.pack(side='left', padx=3)
         self.conversation_button = self.button(actions, '◫  Conversation', self.toggle_conversation, compact=True)
         self.conversation_button.pack(side='left', padx=3)
-        self.button(actions, 'ⓘ', self.api_help, compact=True).pack(side='left', padx=3)
-        self.button(actions, '⚙', self.open_settings, compact=True).pack(side='left', padx=3)
+        self.button(actions, 'Help', self.api_help, compact=True).pack(side='left', padx=3)
+        self.button(actions, 'Settings', self.open_settings, compact=True).pack(side='left', padx=3)
+
+        self.mode_toolbar = tk.Frame(self, bg=BG)
+        self.mode_toolbar.grid(row=1, column=0, sticky='ew', padx=24, pady=(0, 8))
 
         self.body = tk.Frame(self, bg=BG)
-        self.body.grid(row=1, column=0, sticky='nsew', padx=24, pady=(0, 16))
+        self.body.grid(row=2, column=0, sticky='nsew', padx=24, pady=(0, 16))
 
         self.stage = tk.Frame(self.body, bg=BG)
         self.stage.pack(side='left', fill='both', expand=True)
 
         self.orb = tk.Canvas(
             self.stage,
+            width=1,
+            height=1,
             bg=BG,
             highlightthickness=0,
             borderwidth=0,
@@ -273,7 +288,7 @@ class App(tk.Tk):
         self.orb.pack(fill='both', expand=True, padx=(0, 12), pady=(0, 2))
         self.build_orb()
 
-        state_wrap = tk.Frame(self.stage, bg=BG, height=62)
+        state_wrap = tk.Frame(self.stage, bg=BG, height=84)
         state_wrap.pack(fill='x', pady=(0, 8))
         state_wrap.pack_propagate(False)
         tk.Label(
@@ -283,13 +298,17 @@ class App(tk.Tk):
             fg=INK,
             font=('Segoe UI', 15, 'bold'),
         ).pack()
-        tk.Label(
+        hint_label = tk.Label(
             state_wrap,
             textvariable=self.display_hint,
             bg=BG,
             fg=MUTED,
             font=('Segoe UI', 10),
-        ).pack(pady=(3, 0))
+            wraplength=650,
+        )
+        hint_label.pack(pady=(3, 0))
+        self.stage.bind('<Configure>', lambda event: hint_label.configure(
+            wraplength=max(280, event.width-24)), add='+')
 
         self.session_dock = tk.Frame(
             self.stage,
@@ -300,26 +319,30 @@ class App(tk.Tk):
             pady=10,
         )
         self.session_dock.pack(pady=(0, 8))
+        turn_controls = tk.Frame(self.session_dock, bg=SURFACE)
+        turn_controls.pack()
+        voice_controls = tk.Frame(self.session_dock, bg=SURFACE)
+        voice_controls.pack(pady=(8, 0))
 
-        self.start_button = self.button(self.session_dock, 'Begin', self.start, True)
+        self.start_button = self.button(turn_controls, 'Begin', self.start, True)
         self.start_button.pack(side='left', padx=4)
 
         self.interrupt_button = self.button(
-            self.session_dock, '↯  Interrupt', lambda: self.command('interrupt'), compact=True
+            turn_controls, 'Interrupt', lambda: self.command('interrupt'), compact=True
         )
         self.interrupt_button.pack(side='left', padx=4)
 
         self.ready_button = self.button(
-            self.session_dock, '✓  I’m ready', lambda: self.command('finish'), compact=True
+            turn_controls, 'Finish my turn', lambda: self.command('finish'), compact=True
         )
         self.ready_button.pack(side='left', padx=4)
 
-        self.end_button = self.button(self.session_dock, '■  End', self.stop, compact=True, danger=True)
+        self.end_button = self.button(turn_controls, 'End session', self.stop, compact=True, danger=True)
         self.end_button.pack(side='left', padx=4)
 
         hold = tk.Checkbutton(
-            self.session_dock,
-            text='Take your time',
+            voice_controls,
+            text='Hold my turn',
             variable=self.hold,
             command=lambda: self.command('hold', self.hold.get()),
             bg=SURFACE,
@@ -327,13 +350,16 @@ class App(tk.Tk):
             selectcolor=SURFACE_2,
             activebackground=SURFACE,
             activeforeground=INK,
-            font=('Segoe UI', 9),
+            font=('Segoe UI', 10),
             cursor='hand2',
         )
         hold.pack(side='left', padx=(10, 4))
+        tooltip(hold, 'Keep your turn open while you think. Finish my turn sends it when you are ready.')
+        tooltip(self.ready_button, 'Finish speaking and let the AI respond now, without waiting for the silence timer.')
+        tooltip(self.interrupt_button, 'Stop the AI response so you can speak. Unheard words are marked in the transcript.')
 
         mute = tk.Checkbutton(
-            self.session_dock,
+            voice_controls,
             text='Mute',
             variable=self.muted,
             command=lambda: self.command('mute', self.muted.get()),
@@ -342,7 +368,7 @@ class App(tk.Tk):
             selectcolor=SURFACE_2,
             activebackground=SURFACE,
             activeforeground=INK,
-            font=('Segoe UI', 9),
+            font=('Segoe UI', 10),
             cursor='hand2',
         )
         mute.pack(side='left', padx=4)
@@ -358,14 +384,14 @@ class App(tk.Tk):
             selectcolor=SURFACE,
             activebackground=BG,
             activeforeground=INK,
-            font=('Segoe UI', 8),
+            font=('Segoe UI', 10),
             cursor='hand2',
         ).pack()
         self.label(
             self.consent_bar,
-            'Your transcript stays in the app unless you export it.',
+            'Save locally in History, or export when you choose. Nothing is saved automatically.',
             8,
-            '#61748b',
+            MUTED,
         ).pack(pady=(1, 0))
 
         self.make_conversation_panel()
@@ -433,9 +459,9 @@ class App(tk.Tk):
             self.log.bind(sequence, scroll_conversation)
             scrollbar.bind(sequence, scroll_conversation)
 
-        self.log.tag_configure('Coach', foreground=AMBER, font=('Segoe UI', 8, 'bold'))
-        self.log.tag_configure('Coachee', foreground=CYAN, font=('Segoe UI', 8, 'bold'))
-        self.log.tag_configure('Session note', foreground=MUTED, font=('Segoe UI', 8, 'italic'))
+        self.log.tag_configure('Coach', foreground=AMBER, font=('Segoe UI', 10, 'bold'))
+        self.log.tag_configure('Coachee', foreground=CYAN, font=('Segoe UI', 10, 'bold'))
+        self.log.tag_configure('Session note', foreground=MUTED, font=('Segoe UI', 10, 'italic'))
         self.log.tag_configure('body', foreground=INK, font=('Segoe UI', 10), lmargin1=0, lmargin2=0)
 
         composer = tk.Frame(
@@ -494,8 +520,7 @@ class App(tk.Tk):
         self.settings = tk.Toplevel(self)
         self.settings.title('Presence • Settings')
         self.settings.configure(bg=BG)
-        self.settings.geometry('600x760')
-        self.settings.minsize(520, 560)
+        fit_window(self.settings, 660, 780, minimum=(520, 500))
         self.settings.protocol('WM_DELETE_WINDOW', self.settings.withdraw)
         self.settings.bind('<Escape>', lambda _: self.settings.withdraw())
         self.settings.rowconfigure(1, weight=1)
@@ -563,7 +588,7 @@ class App(tk.Tk):
             ),
             bg=PANEL,
             fg=MUTED,
-            font=('Segoe UI', 8),
+            font=('Segoe UI', 10),
             justify='left',
             anchor='w',
             wraplength=500,
@@ -584,7 +609,7 @@ class App(tk.Tk):
             selectcolor=SURFACE,
             activebackground=PANEL,
             activeforeground=INK,
-            font=('Segoe UI', 8),
+            font=('Segoe UI', 10),
         ).pack(anchor='w')
         self.button(connection, 'Forget saved key', self.forget_key, compact=True).pack(anchor='w', pady=(8, 0))
 
@@ -677,7 +702,7 @@ class App(tk.Tk):
             selectcolor=SURFACE,
             activebackground=PANEL,
             activeforeground=INK,
-            font=('Segoe UI', 9),
+            font=('Segoe UI', 10),
         ).pack(anchor='w')
         self.label(motion, 'Changes apply immediately where possible; audio settings apply next session.', 8, MUTED).pack(
             anchor='w', pady=(8, 0)
@@ -695,7 +720,7 @@ class App(tk.Tk):
         dialog = tk.Toplevel(parent)
         dialog.title('Connect Presence to Gemini')
         dialog.configure(bg=BG)
-        dialog.geometry('520x610')
+        fit_window(dialog, 560, 660, minimum=(520, 500))
         dialog.resizable(False, False)
         dialog.transient(parent)
 
@@ -731,7 +756,7 @@ class App(tk.Tk):
                 width=3,
                 bg=SURFACE_2,
                 fg=AMBER,
-                font=('Segoe UI', 9, 'bold'),
+                font=('Segoe UI', 10, 'bold'),
                 padx=4,
                 pady=4,
             ).pack(side='left', padx=(0, 10))
@@ -1145,6 +1170,9 @@ class App(tk.Tk):
         elif raw_state == 'Session complete':
             label = 'Session complete'
             hint = 'Keep what is useful. Leave what is not.'
+        elif raw_state == 'Saved session':
+            label = 'Saved conversation'
+            hint = 'Export this transcript, or Begin to start a new session.'
         elif live:
             label = raw_state.replace('…', '').strip() or 'Thinking'
             hint = 'Presence is with your last thought.'

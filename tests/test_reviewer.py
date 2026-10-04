@@ -100,6 +100,14 @@ def _pcc_payload(level="PCC"):
 
 
 class ReviewerMetricsTests(unittest.TestCase):
+    def test_goal_guides_review_without_hidden_scenario_context(self):
+        rows = [("00:00:00", "Coach", "Hello")]
+        prompt = build_review_prompt("PCC", rows, calculate_metrics(rows, 1),
+            {"practice_focus": "Active Listening", "hidden_context": "Secret story"})
+        self.assertIn("SELECTED PRACTICE GOAL\nActive Listening", prompt)
+        self.assertIn("complete PCC developmental review", prompt)
+        self.assertNotIn("Secret story", prompt)
+
     def test_real_sdk_retries_busy_model_then_falls_back(self):
         real_client = reviewer.genai.Client
         requests = []

@@ -318,6 +318,7 @@ def build_review_prompt(level: str, rows, metrics: SessionMetrics, scenario=None
 
     transcript = transcript_for_review(rows)
     contract = _review_json_contract(level)
+    goal = (scenario or {}).get("practice_focus", "Full session")
 
     return f"""You are reviewing a simulated professional coaching practice transcript.
 The human user is the COACH. The other speaker is a simulated COACHEE.
@@ -352,6 +353,12 @@ Interruption notes: {metrics.interruptions}
 
 VISIBLE SCENARIO
 {scenario_text}
+
+SELECTED PRACTICE GOAL
+{goal}
+Keep the complete {level} developmental review. Where the transcript provides evidence,
+highlight findings and a useful next practice step for this goal. Do not invent evidence
+or rate a goal more favorably merely because the user selected it.
 
 STRUCTURED OUTPUT CONTRACT
 {contract}
@@ -760,7 +767,7 @@ def structured_model_output_to_text(raw_text: str, level: str, rows=None) -> str
     return render_structured_review(data, level, source_name)
 
 
-def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, scenario=None) -> str:
+def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, scenario=None, on_progress=None) -> str:
     prompt = build_review_prompt(level, rows, metrics, scenario)
     client = genai.Client(
         api_key=api_key,
@@ -777,9 +784,12 @@ def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, sce
         ),
     )
     errors = []
+    stage = "Reviewing transcript"
     try:
         for model in REVIEW_MODELS:
             try:
+                if on_progress:
+                    on_progress(stage)
                 response = client.models.generate_content(
                     model=model,
                     contents=prompt,
@@ -792,9 +802,14 @@ def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, sce
                 raw = (getattr(response, "text", None) or "").strip()
                 if not raw:
                     raise RuntimeError("returned no text")
+                if on_progress:
+                    on_progress("Checking evidence and building report")
                 return structured_model_output_to_text(raw, level, rows)
             except Exception as exc:
                 errors.append(f"{model}: {exc}")
+                issue = classify_runtime_error(exc, "Google Gemini", context="review")
+                stage = ("Gemini busy — trying another review model" if issue.code == "provider_unavailable"
+                         else "Trying another Gemini review model")
                 if not should_try_review_fallback(exc, "Google Gemini"):
                     break
 

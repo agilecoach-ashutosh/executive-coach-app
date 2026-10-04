@@ -13,6 +13,7 @@ import queue
 import tkinter as tk
 import webbrowser
 from tkinter import messagebox, ttk
+from ui_helpers import fit_window
 
 import provider_mode as provider
 
@@ -36,7 +37,7 @@ def _paragraph(parent, text, *, fg=None, size=9, bold=False, pady=(0, 8)):
         text=text,
         bg=base.PANEL,
         fg=fg or base.MUTED,
-        font=("Segoe UI", size, "bold" if bold else "normal"),
+        font=("Segoe UI", max(10, size), "bold" if bold else "normal"),
         justify="left",
         anchor="w",
         wraplength=610,
@@ -112,11 +113,14 @@ def _enhance_consent_bar(self):
     ]
     if info_labels:
         info_labels[0].configure(
+            wraplength=650,
             text=(
-                "Session audio/transcript stay in app memory unless you export them. "
-                "Cloud processing still occurs with the selected provider."
+                "Save text locally in History or export it. Audio stays in memory unless exported. "
+                "Voice/text are processed by the selected provider."
             )
         )
+        self.stage.bind("<Configure>", lambda event: info_labels[0].configure(
+            wraplength=max(300, event.width-30)), add="+")
 
     privacy_row = tk.Frame(self.consent_bar, bg=base.BG)
     privacy_row.pack(pady=(3, 0))
@@ -254,8 +258,7 @@ def open_privacy_notice(self):
     dialog = tk.Toplevel(self)
     dialog.title("Presence Coach • Privacy & data use")
     dialog.configure(bg=base.BG)
-    dialog.geometry("700x760")
-    dialog.minsize(650, 650)
+    fit_window(dialog, 740, 780, minimum=(650, 520))
     dialog.transient(self)
 
     self.label(dialog, "PRIVACY & DATA USE", 18, base.AMBER, "bold").pack(
@@ -320,7 +323,7 @@ def open_privacy_notice(self):
         (
             "Presence has no project-operated account system, session-content backend, or analytics/telemetry "
             "in the current code. The transcript and captured two-sided session audio are held in application "
-            "memory. Nothing is written as a transcript or recording unless you explicitly export it. Saved API "
+            "memory. Text is saved only if you choose Save locally in History or export it; audio is written only on export. Saved API "
             "keys use the operating system credential store."
         ),
         base.CYAN,
@@ -360,7 +363,7 @@ def open_privacy_notice(self):
         "Retention and deletion",
         (
             "You can discard the current in-memory transcript and captured audio below. Closing the application "
-            "also ends the local in-memory session. Exported Word/MP3 files are controlled by you and are not "
+            "also ends the local in-memory session. Delete saved text sessions from History. Exported Word/MP3 files are controlled by you and are not "
             "encrypted by Presence. Provider-side retention and deletion are governed by the selected provider "
             "and your account settings."
         ),
