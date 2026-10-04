@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import queue
+import copy
 import threading
 import time
 import tkinter as tk
@@ -30,6 +31,7 @@ def review_init(self):
     self.practice_review_text = ""
     self.practice_review_level = tk.StringVar(master=self, value="PCC")
     self.practice_review_generated_level = None
+    self._review_snapshot = None
     self.practice_review_level.trace_add("write", lambda *_: _review_level_changed(self))
     self._review_queue = queue.Queue()
     self._review_dialog = None
@@ -51,6 +53,9 @@ def review_init(self):
 
 
 def _clear_review_state(self):
+    # A new accepted session must not leave the previous session's dialog open.
+    if getattr(self, "_review_dialog", None):
+        _close_review_dialog(self)
     self._review_generation = getattr(self, "_review_generation", 0) + 1
     while True:
         try:
@@ -62,6 +67,7 @@ def _clear_review_state(self):
     self.practice_review_shown = False
     self.practice_review_text = ""
     self.practice_review_generated_level = None
+    self._review_snapshot = None
     self._review_started_at = None
     self._review_last_elapsed = -1
     if hasattr(self, "review_button"):
@@ -77,9 +83,21 @@ def _begin_review_generation(self):
             break
     self.practice_review_text = ""
     self.practice_review_generated_level = None
+    self._review_snapshot = None
     if getattr(self, "_review_export_button", None) and self._review_export_button.winfo_exists():
         self._review_export_button.configure(state="disabled")
     return self._review_generation
+
+
+def _capture_review_snapshot(self):
+    """Use the same detached evidence for generation and subsequent export."""
+    snapshot = {
+        "rows": list(self.transcript.rows),
+        "metrics": _current_metrics(self),
+        "scenario": copy.deepcopy(self.current_scenario),
+    }
+    self._review_snapshot = snapshot
+    return snapshot
 
 
 def _review_level_changed(self):
@@ -87,6 +105,7 @@ def _review_level_changed(self):
     self._review_generation += 1
     self.practice_review_text = ""
     self.practice_review_generated_level = None
+    self._review_snapshot = None
     self._review_started_at = None
     while True:
         try:
@@ -114,8 +133,6 @@ def review_select_scenario(self, scenario, dialog=None):
 
 
 def review_start(self):
-    if getattr(self, "practice_mode", "coachee") == "coach":
-        _clear_review_state(self)
     return _original_start(self)
 
 
@@ -458,10 +475,9 @@ def generate_coaching_review(self):
         return
 
     level = self.practice_review_level.get().upper()
-    metrics = _current_metrics(self)
-    rows = list(self.transcript.rows)
-    scenario = self.current_scenario
     generation = _begin_review_generation(self)
+    snapshot = _capture_review_snapshot(self)
+    metrics, rows, scenario = snapshot["metrics"], snapshot["rows"], snapshot["scenario"]
     self._review_requested_level = level
 
     self._review_started_at = time.monotonic()
@@ -472,6 +488,7 @@ def generate_coaching_review(self):
         self,
         f"Reviewing this transcript against the {level} developmental lens…\n\n"
         "Presence is asking the reviewer for compact structured findings, then it will build the readable review locally. "
+        "If Gemini is temporarily busy, Presence retries once and tries the other Gemini review models. "
         "Longer transcripts and deeper evidence checks can still take a little time.",
     )
 

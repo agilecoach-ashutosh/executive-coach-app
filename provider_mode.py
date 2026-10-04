@@ -544,12 +544,11 @@ def provider_generate_review(self):
         return
 
     level = self.practice_review_level.get().upper()
-    metrics = review._current_metrics(self)
-    rows = list(self.transcript.rows)
-    scenario = self.current_scenario
     conversation_model = self.groq_model.get()
-    prompt = build_review_prompt(level, rows, metrics, scenario)
     generation = review._begin_review_generation(self)
+    snapshot = review._capture_review_snapshot(self)
+    metrics, rows, scenario = snapshot["metrics"], snapshot["rows"], snapshot["scenario"]
+    prompt = build_review_prompt(level, rows, metrics, scenario)
     self._review_requested_level = level
 
     self._review_started_at = time.monotonic()
@@ -621,4 +620,3 @@ base.App.generate_coaching_review = provider_generate_review
 
 if __name__ == "__main__":
     base.App().mainloop()
-

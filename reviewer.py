@@ -26,6 +26,8 @@ REVIEW_MODELS = (
 
 FAST_GROQ_REVIEW_MODEL = "openai/gpt-oss-20b"
 REVIEW_TIMEOUT_MILLISECONDS = 30_000
+REVIEW_HTTP_ATTEMPTS = 2  # One request and one delayed retry per model.
+REVIEW_TRANSIENT_HTTP_CODES = (500, 502, 503, 504)
 
 _NON_FALLBACK_REVIEW_ERRORS = {
     "quota",
@@ -43,6 +45,9 @@ def should_try_review_fallback(exc: Exception, provider_name: str) -> bool:
         # Structured-output/schema failures can be model-specific.
         return True
     issue = classify_runtime_error(exc, provider_name, context="review")
+    if issue.code == "provider_unavailable" and provider_name == "Google Gemini":
+        # High demand can affect one model while another Gemini model is healthy.
+        return True
     return issue.code not in _NON_FALLBACK_REVIEW_ERRORS
 
 ACC_BEHAVIOR_IDS = (
@@ -435,12 +440,14 @@ def parse_structured_review(
                 raise ValueError(
                     f"ACC behavior {reference} returned an invalid rating: {rating or 'blank'}"
                 )
+            by_reference[reference]["rating"] = rating
 
         c1 = data["competency_1"]
         for key in ("ethics", "coaching_role"):
             status = str(c1.get(key, "")).strip().upper()
             if status not in {"OBSERVED", "NOT OBSERVED"}:
                 raise ValueError(f"ACC Competency 1 {key} must be OBSERVED or NOT OBSERVED.")
+            c1[key] = status
 
         c2_status = str(data["competency_2"].get("status", "")).strip().upper()
         if c2_status != "NOT_RATED_SINGLE_SESSION":
@@ -459,6 +466,7 @@ def parse_structured_review(
                     "PCC/MCC behavior returned an invalid developmental status: "
                     + (rating or "blank")
                 )
+            item["rating"] = rating
 
     if requested_level != "ACC":
         references = [item.get("reference") for item in behaviors]
@@ -756,7 +764,17 @@ def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, sce
     prompt = build_review_prompt(level, rows, metrics, scenario)
     client = genai.Client(
         api_key=api_key,
-        http_options=types.HttpOptions(timeout=REVIEW_TIMEOUT_MILLISECONDS),
+        http_options=types.HttpOptions(
+            timeout=REVIEW_TIMEOUT_MILLISECONDS,
+            retry_options=types.HttpRetryOptions(
+                attempts=REVIEW_HTTP_ATTEMPTS,
+                initial_delay=1.0,
+                max_delay=2.0,
+                exp_base=2.0,
+                jitter=0.5,
+                http_status_codes=list(REVIEW_TRANSIENT_HTTP_CODES),
+            ),
+        ),
     )
     errors = []
     try:
@@ -790,4 +808,3 @@ def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, sce
             client.close()
         except Exception:
             pass
-
