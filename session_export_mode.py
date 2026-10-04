@@ -11,6 +11,7 @@ from tkinter import filedialog, messagebox
 
 import practice_review as review
 import privacy_mode as provider
+import history_ui
 from review_export import export_review_docx
 from runtime_errors import classify_export_error
 from session_export import export_transcript_docx, format_elapsed
@@ -39,6 +40,7 @@ def _branded_init(self):
 
     _original_app_init(self)
     self._audio_export_in_progress = False
+    history_ui.install(self)
 
     try:
         icon = _resource_path("Presence-Coach.ico")
@@ -294,8 +296,8 @@ def show_session_review_with_exports(self):
             text = child.cget("text")
             if text == "Export transcript":
                 child.configure(text="Export transcript (.docx)")
-            elif text == "Export review":
-                child.configure(text="Export review (.docx)")
+            elif text in ("Export review", "Export full report"):
+                child.configure(text="Full report (.docx)")
         except (tk.TclError, AttributeError):
             pass
 

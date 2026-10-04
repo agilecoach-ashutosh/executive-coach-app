@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import queue
 import copy
+import re
 import threading
 import time
 import tkinter as tk
@@ -12,6 +13,8 @@ from tkinter import filedialog, messagebox, ttk
 import practice_mode as practice
 from reviewer import calculate_metrics, format_duration, generate_review
 from runtime_errors import classify_export_error, classify_runtime_error
+from review_summary import concise_review
+from ui_helpers import fit_window
 
 base = practice.base
 _original_init = base.App.__init__
@@ -40,15 +43,16 @@ def review_init(self):
     self._review_export_button = None
     self._review_started_at = None
     self._review_last_elapsed = -1
+    self._review_stage = "Reviewing transcript"
     self._review_generation = 0
 
     self.review_button = self.button(
-        self.header,
+        self.mode_toolbar,
         "Review",
         self.show_session_review,
         compact=True,
     )
-    self.review_button.pack(side="right", padx=(4, 0), pady=8)
+    self.review_button.pack(side="right", padx=(4, 0))
     self.review_button.configure(state="disabled")
 
 
@@ -121,14 +125,18 @@ def _review_level_changed(self):
 
 
 def review_select_coachee_mode(self, dialog=None):
+    previous = self.transcript
     result = _original_select_coachee_mode(self, dialog)
-    _clear_review_state(self)
+    if self.transcript is not previous:
+        _clear_review_state(self)
     return result
 
 
 def review_select_scenario(self, scenario, dialog=None):
+    previous = self.transcript
     result = _original_select_scenario(self, scenario, dialog)
-    _clear_review_state(self)
+    if self.transcript is not previous:
+        _clear_review_state(self)
     return result
 
 
@@ -180,8 +188,8 @@ def _metric_row(self, parent, label, value, note=None):
             parent,
             text=note,
             bg=base.PANEL,
-            fg="#61748b",
-            font=("Segoe UI", 7),
+            fg=base.MUTED,
+            font=("Segoe UI", 10),
             justify="left",
             anchor="w",
             wraplength=238,
@@ -196,6 +204,8 @@ def _close_review_dialog(self):
     self._review_output = None
     self._review_generate_button = None
     self._review_export_button = None
+    self._review_notebook = None
+    self._review_evidence = None
 
 
 def _make_scrollable_review_sidebar(self, parent):
@@ -281,13 +291,12 @@ def show_session_review(self):
     self._review_dialog = dialog
     dialog.title("Coach Practice • Session Review")
     dialog.configure(bg=base.BG)
-    dialog.geometry("940x820")
-    dialog.minsize(800, 680)
+    fit_window(dialog, 1040, 780, minimum=(820, 560))
     dialog.transient(self)
 
     header = tk.Frame(dialog, bg=base.BG)
     header.pack(fill="x", padx=26, pady=(22, 8))
-    self.label(header, "SESSION COMPLETE", 18, base.AMBER, "bold").pack(side="left")
+    self.label(header, "Your practice review", 20, base.AMBER, "bold").pack(side="left")
     self.button(header, "Close", self._close_review_dialog, compact=True).pack(side="right")
 
     scenario = getattr(self, "current_scenario", None)
@@ -309,6 +318,9 @@ def show_session_review(self):
     left = _make_scrollable_review_sidebar(self, body)
 
     self.label(left, "Session metrics", 12, base.INK, "bold").pack(anchor="w", pady=(0, 8))
+    goal = (scenario or {}).get("practice_focus", "Full session")
+    tk.Label(left, text=f"Goal · {goal}", bg=base.PANEL, fg=base.CYAN, font=("Segoe UI", 11, "bold"),
+             wraplength=250, justify="left").pack(anchor="w", pady=(0, 12))
     _metric_row(self, left, "Duration", format_duration(metrics.duration_seconds))
     _metric_row(
         self,
@@ -345,7 +357,7 @@ def show_session_review(self):
             selectcolor=base.SURFACE_2,
             activebackground=base.PANEL,
             activeforeground=base.INK,
-            font=("Segoe UI", 9, "bold"),
+            font=("Segoe UI", 10, "bold"),
         ).pack(anchor="w", pady=1)
 
     # Keep the actions together and above the disclaimer so they stay easy to find.
@@ -361,7 +373,7 @@ def show_session_review(self):
 
     self._review_export_button = self.button(
         left,
-        "Export review",
+        "Export full report",
         self.export_coaching_review,
         compact=True,
     )
@@ -375,8 +387,8 @@ def show_session_review(self):
             "credential-readiness decision, or pass/fail result."
         ),
         bg=base.PANEL,
-        fg="#71849a",
-        font=("Segoe UI", 7),
+        fg=base.MUTED,
+        font=("Segoe UI", 10),
         justify="left",
         anchor="w",
         wraplength=238,
@@ -392,11 +404,15 @@ def show_session_review(self):
 
     review_header = tk.Frame(right, bg=base.PANEL)
     review_header.pack(fill="x", padx=16, pady=(14, 6))
-    self.label(review_header, "Coaching review", 12, base.INK, "bold").pack(side="left")
-    self.label(review_header, "2025 competencies • 2026 MSR lens", 7, base.MUTED).pack(side="right")
+    self.label(review_header, "Feedback you can use", 14, base.INK, "bold").pack(side="left")
 
-    text_wrap = tk.Frame(right, bg=base.PANEL)
-    text_wrap.pack(fill="both", expand=True, padx=10, pady=(0, 10))
+    notebook = ttk.Notebook(right, style="Presence.TNotebook")
+    notebook.pack(fill="both", expand=True, padx=10, pady=(4, 10))
+    text_wrap = tk.Frame(notebook, bg=base.PANEL)
+    evidence_wrap = tk.Frame(notebook, bg=base.PANEL)
+    notebook.add(text_wrap, text="Quick feedback")
+    notebook.add(evidence_wrap, text="Transcript evidence")
+    self._review_notebook = notebook
     scroll = ttk.Scrollbar(
         text_wrap,
         orient="vertical",
@@ -408,7 +424,7 @@ def show_session_review(self):
         bg=base.PANEL,
         fg=base.INK,
         insertbackground=base.INK,
-        font=("Segoe UI", 9),
+        font=("Segoe UI", 11),
         wrap="word",
         relief="flat",
         padx=10,
@@ -431,17 +447,27 @@ def show_session_review(self):
         scroll.bind(sequence, scroll_output)
 
     self._review_output = output
+    output.tag_configure("heading", foreground=base.AMBER, font=("Segoe UI", 12, "bold"), spacing1=12, spacing3=8)
+    evidence_scroll = ttk.Scrollbar(evidence_wrap, orient="vertical", style="Presence.Vertical.TScrollbar")
+    evidence_scroll.pack(side="right", fill="y")
+    evidence = tk.Text(evidence_wrap, bg=base.PANEL, fg=base.INK, wrap="word", relief="flat",
+                       font=("Segoe UI", 11), padx=16, pady=14, spacing3=8,
+                       yscrollcommand=evidence_scroll.set)
+    evidence.pack(fill="both", expand=True)
+    evidence_scroll.configure(command=evidence.yview)
+    evidence.tag_configure("speaker", foreground=base.CYAN, font=("Segoe UI", 11, "bold"))
+    evidence.tag_configure("selected", background=base.SURFACE_2, foreground=base.INK)
+    self._review_evidence = evidence
+    _fill_review_evidence(self)
 
     if self.practice_review_text:
-        output.insert("1.0", self.practice_review_text)
+        _set_review_output(self, self.practice_review_text)
     else:
         output.insert(
             "1.0",
-            "Choose ACC, PCC, or MCC and generate a developmental review.\n\n"
-            "The reviewer receives only the visible Coach/Coachee transcript and local session metrics. "
-            "It does not receive the simulated client's hidden scenario context.\n\n"
-            "Use the output as practice feedback and discussion material with a qualified mentor coach, "
-            "not as a credential result.",
+            "Choose ACC, PCC, or MCC, then generate feedback.\n\n"
+            "You’ll see what worked, what to practise next, and key moments here. "
+            "Export the full Word report for detailed competency evidence.",
         )
     output.configure(state="disabled")
 
@@ -458,9 +484,55 @@ def _set_review_output(self, text):
         return
     output.configure(state="normal")
     output.delete("1.0", "end")
-    output.insert("1.0", text)
+    goal = ((getattr(self, "_review_snapshot", None) or {}).get("scenario") or
+            getattr(self, "current_scenario", None) or {}).get("practice_focus", "Full session")
+    output.insert("1.0", concise_review(text, goal))
+    for line in range(1, int(output.index("end-1c").split(".")[0])+1):
+        value = output.get(f"{line}.0", f"{line}.end")
+        if value and (value.isupper() or value.startswith("YOUR PRACTICE GOAL")):
+            output.tag_add("heading", f"{line}.0", f"{line}.end")
+    for match in re.finditer(r"\[T\d{4,}\]", output.get("1.0", "end-1c")):
+        turn = match.group()[1:-1]
+        tag = f"link_{turn}"
+        output.tag_add(tag, f"1.0+{match.start()}c", f"1.0+{match.end()}c")
+        output.tag_configure(tag, foreground=base.CYAN, underline=True)
+        output.tag_bind(tag, "<Button-1>", lambda _, t=turn: _show_evidence_turn(self, t))
+        output.tag_bind(tag, "<Enter>", lambda _: output.configure(cursor="hand2"))
+        output.tag_bind(tag, "<Leave>", lambda _: output.configure(cursor="xterm"))
     output.configure(state="disabled")
     output.see("1.0")
+
+
+def _fill_review_evidence(self):
+    widget = getattr(self, "_review_evidence", None)
+    if not widget or not widget.winfo_exists():
+        return
+    rows = (getattr(self, "_review_snapshot", None) or {}).get("rows", self.transcript.rows)
+    widget.configure(state="normal")
+    widget.delete("1.0", "end")
+    widget.insert("end", "Select a cited turn in Quick feedback to highlight its source.\n\n")
+    for index, (stamp, role, text) in enumerate(rows, 1):
+        turn = f"T{index:04d}"
+        widget.mark_set(turn, "end-1c")
+        widget.mark_gravity(turn, "left")
+        start = widget.index("end-1c")
+        widget.insert("end", f"[{turn}] {stamp} · {role}\n", "speaker")
+        widget.insert("end", text + "\n\n")
+        widget.tag_add(turn, start, "end-1c")
+    widget.configure(state="disabled")
+
+
+def _show_evidence_turn(self, turn):
+    widget = getattr(self, "_review_evidence", None)
+    if not widget or not widget.winfo_exists() or turn not in widget.mark_names():
+        return
+    self._review_notebook.select(1)
+    widget.tag_remove("selected", "1.0", "end")
+    ranges = widget.tag_ranges(turn)
+    if ranges:
+        widget.tag_add("selected", *ranges)
+    widget.see(turn)
+    widget.focus_set()
 
 
 def generate_coaching_review(self):
@@ -494,7 +566,8 @@ def generate_coaching_review(self):
 
     def worker():
         try:
-            result = generate_review(api_key, level, rows, metrics, scenario)
+            result = generate_review(api_key, level, rows, metrics, scenario,
+                on_progress=lambda stage: self._review_queue.put((generation, "progress", stage)))
             self._review_queue.put((generation, "ok", result))
         except Exception as exc:
             self._review_queue.put((generation, "error", str(exc)))
@@ -523,6 +596,12 @@ def _poll_review_result(self):
             self.after(120, self._poll_review_result)
         return
 
+    if status == "progress":
+        self._review_stage = value
+        _set_review_output(self, value + "…\n\nYour transcript is safe. You can export the full report when it is ready.")
+        self.after(120, self._poll_review_result)
+        return
+
     self._review_started_at = None
     self._review_last_elapsed = -1
     if self._review_generate_button and self._review_generate_button.winfo_exists():
@@ -532,6 +611,7 @@ def _poll_review_result(self):
         self.practice_review_text = value
         self.practice_review_generated_level = self._review_requested_level
         _set_review_output(self, value)
+        _fill_review_evidence(self)
         if self._review_export_button and self._review_export_button.winfo_exists():
             self._review_export_button.configure(state="normal")
     else:

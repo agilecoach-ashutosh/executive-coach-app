@@ -4,8 +4,19 @@ Presence Coach is a Windows and macOS desktop application for practising profess
 
 It provides two experiences:
 
-- **I am a Coachee** — bring a topic and let Presence act as the coach.
-- **I am a Coach** — coach a simulated professional client, then review the session.
+- **Receive coaching** — bring a topic and let Presence act as the coach.
+- **Practise coaching** — coach a simulated professional client, then review the session.
+
+### Practice workflow
+
+1. Choose **Practise coaching**, a client, and **Your practice goal** (or Full session).
+2. Speak naturally. **Finish my turn** asks the AI to respond immediately; **Hold my turn** keeps your turn open while you think. Hover over either control or Interrupt for help.
+3. The review opens with **Quick feedback**: what worked, what to practise next, development opportunities, and key moments. The selected practice goal is surfaced where the transcript provides evidence.
+4. Click a cited turn such as `[T0002]` to highlight it in **Transcript evidence**. The on-screen summary does not display the full competency report.
+5. **Full report (.docx)** exports the complete developmental review and annotated transcript using the same evidence snapshot. Generation progress shows when the app reviews the transcript, tries another model, or builds the report.
+6. Optionally open **History → Save current session locally**. Saved text and reviews can be reopened and deleted on this device. Nothing is saved automatically; API keys and audio are excluded. Reopening a session makes no provider request, and a new review requires consent.
+
+Local history files are readable JSON files in the user's application-data directory: Windows `%LOCALAPPDATA%/PresenceCoach/history`, macOS `~/Library/Application Support/PresenceCoach/history`, or Linux `$XDG_DATA_HOME/PresenceCoach/history` (default `~/.local/share`). Exported files are managed separately. Deleted history entries do not delete exports or provider-side records.
 
 > [!IMPORTANT]
 > Presence Coach is an educational and practice tool. It is not a therapist, an ICF-credentialed coach, an official ICF assessment platform, or a substitute for professional mental-health support.

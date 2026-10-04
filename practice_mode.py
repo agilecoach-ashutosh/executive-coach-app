@@ -9,6 +9,7 @@ import random
 import time
 import tkinter as tk
 from tkinter import messagebox, ttk
+from ui_helpers import fit_window
 
 import app as base
 from scenarios import (
@@ -34,10 +35,7 @@ def _client_name(scenario):
 
 
 def _center(window, parent, width, height):
-    parent.update_idletasks()
-    x = parent.winfo_rootx() + max(0, (parent.winfo_width() - width) // 2)
-    y = parent.winfo_rooty() + max(0, (parent.winfo_height() - height) // 2)
-    window.geometry(f'{width}x{height}+{x}+{y}')
+    fit_window(window, width, height)
 
 
 def _reset_for_mode(self):
@@ -64,12 +62,12 @@ def practice_init(self):
     _original_init(self)
 
     self.mode_button = self.button(
-        self.header,
-        'Mode · Coachee',
+        self.mode_toolbar,
+        'Receive coaching',
         self.show_role_chooser,
         compact=True,
     )
-    self.mode_button.pack(side='right', padx=(8, 0), pady=8)
+    self.mode_button.pack(side='left', padx=(0, 8))
 
     # Make the two-mode choice the first intentional interaction without delaying startup.
     self.after(180, self.show_role_chooser)
@@ -116,7 +114,7 @@ def show_role_chooser(self):
     left.pack(side='left', fill='both', expand=True, padx=(0, 9))
     left.pack_propagate(False)
 
-    self.label(left, 'I AM A COACHEE', 14, base.AMBER, 'bold').pack(anchor='w')
+    self.label(left, 'RECEIVE COACHING', 14, base.AMBER, 'bold').pack(anchor='w')
     self.label(left, 'Get coached by Presence', 13, base.INK, 'bold').pack(anchor='w', pady=(14, 8))
     tk.Label(
         left,
@@ -132,7 +130,7 @@ def show_role_chooser(self):
     ).pack(anchor='w')
     self.button(
         left,
-        'Continue as Coachee',
+        'Receive coaching',
         lambda: self.select_coachee_mode(dialog),
         True,
     ).pack(side='bottom', fill='x', pady=(18, 0))
@@ -150,7 +148,7 @@ def show_role_chooser(self):
     right.pack(side='left', fill='both', expand=True, padx=(9, 0))
     right.pack_propagate(False)
 
-    self.label(right, 'I AM A COACH', 14, base.CYAN, 'bold').pack(anchor='w')
+    self.label(right, 'PRACTISE COACHING', 14, base.CYAN, 'bold').pack(anchor='w')
     self.label(right, 'Practice with an AI coachee', 13, base.INK, 'bold').pack(anchor='w', pady=(14, 8))
     tk.Label(
         right,
@@ -168,23 +166,23 @@ def show_role_chooser(self):
         right,
         text='Practice simulation · not a genuine credential-submission client',
         bg=base.PANEL,
-        fg='#71849a',
-        font=('Segoe UI', 8),
+        fg=base.MUTED,
+        font=('Segoe UI', 10),
         justify='left',
         wraplength=280,
     ).pack(anchor='w', pady=(12, 0))
     self.button(
         right,
-        'Choose a Practice Client',
+        'Practise coaching',
         lambda: self.open_scenario_chooser(dialog),
         True,
     ).pack(side='bottom', fill='x', pady=(18, 0))
 
     self.label(
         dialog,
-        'You can switch modes later from the Mode button in the top bar.',
+        'Switch roles using the coaching-mode button in the top bar.',
         8,
-        '#61748b',
+        base.MUTED,
     ).pack(pady=(8, 20))
 
     dialog.bind('<Escape>', lambda _: dialog.destroy())
@@ -202,7 +200,7 @@ def select_coachee_mode(self, dialog=None):
     self.current_scenario = None
     self.ai_speaker_name = 'Presence'
     if hasattr(self, 'mode_button'):
-        self.mode_button.configure(text='Mode · Coachee')
+        self.mode_button.configure(text='Receive coaching')
     _reset_for_mode(self)
 
     if dialog and dialog.winfo_exists():
@@ -300,7 +298,7 @@ def open_scenario_chooser(self, role_dialog=None):
 
     focus_col = tk.Frame(filters, bg=base.PANEL)
     focus_col.grid(row=0, column=3, sticky='ew', padx=(10, 0))
-    self.label(focus_col, 'Practice focus', 8, base.MUTED, 'bold').pack(anchor='w', pady=(0, 4))
+    self.label(focus_col, 'Your practice goal', 10, base.MUTED, 'bold').pack(anchor='w', pady=(0, 4))
     focus_combo = ttk.Combobox(
         focus_col,
         textvariable=focus_var,
@@ -321,7 +319,7 @@ def open_scenario_chooser(self, role_dialog=None):
         textvariable=count_var,
         bg=base.BG,
         fg=base.CYAN,
-        font=('Segoe UI', 8, 'bold'),
+        font=('Segoe UI', 10, 'bold'),
     )
     count_label.pack(side='left')
     difficulty_label = tk.Label(
@@ -329,7 +327,7 @@ def open_scenario_chooser(self, role_dialog=None):
         textvariable=difficulty_note,
         bg=base.BG,
         fg=base.MUTED,
-        font=('Segoe UI', 8),
+        font=('Segoe UI', 10),
     )
     difficulty_label.pack(side='right')
 
@@ -386,7 +384,7 @@ def open_scenario_chooser(self, role_dialog=None):
             text=text,
             bg=base.SURFACE_2,
             fg=base.CYAN if accent else '#8da0b5',
-            font=('Segoe UI', 7, 'bold'),
+            font=('Segoe UI', 10, 'bold'),
             padx=7,
             pady=3,
         )
@@ -469,7 +467,7 @@ def open_scenario_chooser(self, role_dialog=None):
                 text=scenario['visible_problem'],
                 bg=base.PANEL,
                 fg=base.MUTED,
-                font=('Segoe UI', 9),
+                font=('Segoe UI', 10),
                 justify='left',
                 anchor='nw',
                 wraplength=430,
@@ -529,7 +527,7 @@ def select_scenario(self, scenario, dialog=None):
     self.current_scenario = scenario
     self.ai_speaker_name = _client_name(scenario)
     if hasattr(self, 'mode_button'):
-        self.mode_button.configure(text='Mode · Coach')
+        self.mode_button.configure(text='Practise coaching')
 
     _reset_for_mode(self)
     self.display_state.set(f'Ready to coach {self.ai_speaker_name}')
@@ -704,6 +702,9 @@ def practice_animate(self):
     elif raw_state == 'Session complete':
         self.display_state.set('Practice session complete')
         self.display_hint.set('Your Coach / Coachee transcript is ready to review or export.')
+    elif raw_state == 'Saved session':
+        self.display_state.set('Saved practice session')
+        self.display_hint.set('Review your feedback or export the full report. Begin starts a new session.')
     else:
         self.display_state.set(f'Ready to coach {name}')
         self.display_hint.set(self.current_scenario['visible_problem'])

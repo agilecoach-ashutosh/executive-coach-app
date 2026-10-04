@@ -19,6 +19,55 @@ finally:
 
 
 class PracticeReviewGenerationTests(unittest.TestCase):
+    def test_groq_client_setup_failure_finishes_worker_with_error(self):
+        provider = importlib.import_module("provider_mode")
+        state = self.make_state()
+        state.provider = Mock(get=lambda: provider.GROQ)
+        state.groq_key = Mock(get=lambda: "test-key")
+        state.groq_model = Mock(get=lambda: "test-model")
+        state.practice_review_level = Mock(get=lambda: "PCC")
+        state.transcript = types.SimpleNamespace(rows=[("00:00:00", "Coach", "Hello")])
+        state.current_scenario = None
+        state._review_generate_button = Mock()
+        state._review_export_button = None
+        state.after = Mock()
+        state._poll_review_result = Mock()
+        with patch.object(provider, "Groq", side_effect=RuntimeError("Transport unavailable")), \
+                patch.object(provider.threading, "Thread", side_effect=lambda target, **_: types.SimpleNamespace(start=target)), \
+                patch.object(practice_review, "_set_review_output"):
+            provider.provider_generate_review(state)
+        generation, status, value = state._review_queue.get_nowait()
+        self.assertEqual(status, "error")
+        self.assertIn("Transport unavailable", value)
+        self.assertEqual(generation, state._review_generation)
+
+    def test_cancelled_mode_or_client_change_preserves_review(self):
+        state = self.make_state()
+        state.transcript = types.SimpleNamespace(rows=[])
+        state.practice_review_text = "Previous review"
+        for function, original, args in (
+            (practice_review.review_select_coachee_mode, "_original_select_coachee_mode", ()),
+            (practice_review.review_select_scenario, "_original_select_scenario", ({"title": "another"},)),
+        ):
+            with patch.object(practice_review, original, return_value=None):
+                function(state, *args)
+            self.assertEqual(state.practice_review_text, "Previous review")
+
+    def test_progress_updates_do_not_finish_generation_or_enable_export(self):
+        state = self.make_state()
+        state._review_generate_button = None
+        state._review_export_button = None
+        state._review_queue.put((0, "progress", "Checking evidence and building report"))
+        state._review_started_at = 100
+        state.after = Mock()
+        state._poll_review_result = Mock()
+        with patch.object(practice_review, "_set_review_output") as output:
+            practice_review._poll_review_result(state)
+        self.assertEqual(state.practice_review_text, "")
+        self.assertEqual(state._review_started_at, 100)
+        self.assertIn("Checking evidence", output.call_args.args[1])
+        state.after.assert_called_once()
+
     def test_cancelled_gemini_restart_preserves_previous_review(self):
         state = self.make_state()
         state.practice_mode = "coach"

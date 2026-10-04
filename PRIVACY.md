@@ -24,11 +24,12 @@ Running the application does, however, send session information to the cloud AI 
 | Data | Where it is used | Local retention |
 | --- | --- | --- |
 | Microphone audio | Live coaching conversation and speech processing | Held in application memory during the session; not automatically written to disk |
-| Transcript text | Conversation display, optional export, optional coaching review | Held in application memory until discarded or the application closes |
+| Transcript text | Conversation display, optional export, optional coaching review | Held in application memory; optionally saved locally through History |
 | AI response audio/text | Playback, transcript, optional export | Held in application memory during the session |
 | Session metrics | Optional developmental review | Calculated locally from the transcript; sent to the selected provider only when review is requested |
 | API key | Authentication to the selected provider | Kept in memory, or stored in Windows Credential Manager/macOS Keychain if the user enables secure key storage |
 | Exported Word/MP3 files | User-selected local output | Stored wherever the user chooses; Presence does not encrypt exported files |
+| Saved session history | Explicit History → Save current session locally | Transcript, optional review, duration, and visible scenario information saved as local JSON until deleted; no API keys, hidden client context, or audio |
 
 Presence does not automatically save a session recording to disk.
 
@@ -108,6 +109,14 @@ Provider authorization is session-scoped in the current application.
 
 ## 7. Storage, retention, and deletion
 
+### Optional local session history
+
+Presence saves nothing automatically. **History → Save current session locally** explicitly stores the text transcript and any completed review on this device. When a completed review exists, the saved transcript, duration, and visible scenario information come from that review's evidence snapshot. API keys, hidden simulated-client context, and audio are excluded. Saved sessions can be reopened offline or removed using **Delete selected**.
+
+Files are readable JSON in Windows `%LOCALAPPDATA%/PresenceCoach/history`, macOS `~/Library/Application Support/PresenceCoach/history`, or Linux `$XDG_DATA_HOME/PresenceCoach/history` (default `~/.local/share`). These files are not encrypted by Presence. Access depends on the device's operating-system account and permissions. Reopening a session does not send it to a provider. Requesting a new AI review still requires authorization.
+
+Discarding current in-memory data or closing Presence does not delete saved history. Deleting a history entry does not delete exported files or provider-side records.
+
 ### In-memory session data
 
 The user can open **Privacy & data use** and choose **Discard current session data**.
@@ -143,6 +152,7 @@ Because Presence does not maintain a central project-operated store of coaching 
 For:
 
 - **local in-memory data:** use the in-app discard control or close the application;
+- **saved local history:** use History → Delete selected;
 - **exported files:** manage the files directly on the user's device/storage;
 - **provider-side data:** use the selected provider's privacy and account controls;
 - **organization-managed sessions:** contact the organization or professional who decided to use Presence.
