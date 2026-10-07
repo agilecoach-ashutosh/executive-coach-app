@@ -27,6 +27,7 @@ DEFAULT_STT_MODEL = "whisper-large-v3-turbo"
 DEFAULT_TTS_MODEL = "canopylabs/orpheus-v1-english"
 DEFAULT_VOICE = "troy"
 REQUEST_TIMEOUT_SECONDS = 30.0
+MAX_TURN_AUDIO_BYTES = 16000 * 2 * 5 * 60
 # The Groq Free plan currently allows 10 Orpheus TTS requests/minute. Pacing
 # requests avoids turning a normal coaching exchange into a session-ending 429.
 TTS_MIN_INTERVAL_SECONDS = 6.1
@@ -164,6 +165,12 @@ class GroqEngine(threading.Thread):
         self._note_incomplete_response()
         self.stopping.set()
         self.interrupting.set()
+        client = getattr(self, "client", None)
+        if client is not None:
+            def close_transport():
+                with contextlib.suppress(Exception):
+                    client.close()
+            threading.Thread(target=close_transport, daemon=True).start()
         self.output_level = 0.0
         self.playback_until = 0.0
 
@@ -202,7 +209,7 @@ class GroqEngine(threading.Thread):
             self.client = Groq(
                 api_key=self.key,
                 timeout=REQUEST_TIMEOUT_SECONDS,
-                max_retries=1,
+                max_retries=0,
             )
             with contextlib.ExitStack() as audio_stack:
                 try:
@@ -223,9 +230,13 @@ class GroqEngine(threading.Thread):
                     self._respond_to_text(self.kickoff, visible_input=False)
                 self._loop()
         except Exception as exc:
-            detail = str(exc).replace(self.key, "[redacted]")
-            self.emit("error", detail[:800])
+            if not self.stopping.is_set():
+                detail = str(exc).replace(self.key, "[redacted]")
+                self.emit("error", detail[:800])
         finally:
+            if getattr(self, "client", None) is not None:
+                with contextlib.suppress(Exception):
+                    self.client.close()
             self._note_incomplete_response()
             self.output_level = 0.0
             self.playback_until = 0.0
@@ -261,6 +272,11 @@ class GroqEngine(threading.Thread):
             elif was_active:
                 self.current_audio.extend(chunk)
                 self.pending.clear()
+
+            if len(self.current_audio) >= MAX_TURN_AUDIO_BYTES:
+                self.emit("notice", "The five-minute speaking-turn limit was reached. Processing your turn now.")
+                self.gate.reset()
+                action = "end"
 
             if action == "end":
                 audio = bytes(self.current_audio)
@@ -552,3 +568,4 @@ class GroqEngine(threading.Thread):
                     self.recorder.append(data, sample_rate, channels, now=now)
                     self.playback_until = now + frames / sample_rate + .06
                     stream.write(data)
+

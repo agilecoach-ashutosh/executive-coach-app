@@ -1,4 +1,6 @@
 """A manual session-history screen; saving is always an explicit user action."""
+import queue
+import threading
 import time
 import tkinter as tk
 from tkinter import ttk, messagebox
@@ -100,12 +102,47 @@ def show_history(self):
     status = tk.StringVar(master=dialog)
     tk.Label(dialog, textvariable=status, bg=dialog["bg"], fg="#a8b8cc", font=("Segoe UI", 10)).pack(anchor="w", padx=24, pady=8)
 
+    results = queue.Queue()
+    generation = 0
+    entries = []
+    displayed = 0
+
+    def show_more():
+        nonlocal displayed
+        for item in entries[displayed:displayed + 100]:
+            tree.insert("", "end", iid=item["id"], values=(item["saved_at"].replace("T", " ").replace("+00:00", " UTC"),
+                item["title"], "Practise coaching" if item["mode"] == "coach" else "Receive coaching", item["level"] or "—"))
+        displayed = min(len(entries), displayed + 100)
+        status.set(f"Showing {displayed} of {len(entries)} saved sessions")
+        more.configure(state="normal" if displayed < len(entries) else "disabled")
+
     def refresh():
-        tree.delete(*tree.get_children())
-        for item in self.session_history.list_sessions():
-            tree.insert("", "end", iid=item["id"], values=(item["saved_at"].replace("T"," ").replace("+00:00", " UTC"), item["title"],
-                "Practise coaching" if item["mode"] == "coach" else "Receive coaching", item["level"] or "—"))
-        status.set(f"{len(tree.get_children())} saved sessions")
+        nonlocal generation
+        generation += 1
+        token = generation
+        status.set("Loading saved sessions…")
+        def worker():
+            try:
+                results.put((token, self.session_history.list_sessions(), None))
+            except Exception:
+                results.put((token, [], "Could not load saved sessions."))
+        threading.Thread(target=worker, daemon=True).start()
+
+    def poll_history():
+        nonlocal entries, displayed
+        if not dialog.winfo_exists():
+            return
+        try:
+            token, items, error = results.get_nowait()
+            if token == generation:
+                tree.delete(*tree.get_children())
+                entries, displayed = items, 0
+                show_more()
+                if error:
+                    status.set(error)
+        except queue.Empty:
+            pass
+        dialog.after(80, poll_history)
 
     def unavailable():
         if self.engine and self.engine.is_alive() or getattr(self, "_review_started_at", None) or getattr(self, "_audio_export_in_progress", False):
@@ -122,7 +159,7 @@ def show_history(self):
         try:
             identifier = self.session_history.save(**record)
             refresh()
-            tree.selection_set(identifier)
+            # The asynchronous refresh will display the saved entry.
             status.set("Saved locally. Your transcript and review can be reopened here.")
         except (OSError, ValueError) as exc:
             messagebox.showerror("Could not save session", str(exc), parent=dialog)
@@ -152,7 +189,11 @@ def show_history(self):
     self.button(actions, "Save current session locally", save, True).pack(side="left", padx=(0,8))
     self.button(actions, "Open selected", open_selected).pack(side="left", padx=4)
     self.button(actions, "Delete selected", delete, danger=True).pack(side="left", padx=4)
+    more = self.button(actions, "Load more", show_more, compact=True)
+    more.pack(side="left", padx=4)
+    more.configure(state="disabled")
     self.button(actions, "Close", dialog.destroy).pack(side="right")
     tree.bind("<Double-1>", lambda _: open_selected())
     dialog.bind("<Escape>", lambda _: dialog.destroy())
     refresh()
+    poll_history()

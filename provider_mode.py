@@ -11,6 +11,7 @@ import tkinter as tk
 import webbrowser
 from tkinter import messagebox, ttk
 from ui_helpers import fit_window
+from runtime_errors import redact_error
 
 from groq import Groq
 
@@ -544,6 +545,8 @@ def provider_generate_review(self):
         messagebox.showinfo("Review", "A Groq API key is required to generate the review.")
         return
 
+    if not review.authorize_review(self, GROQ):
+        return
     level = self.practice_review_level.get().upper()
     conversation_model = self.groq_model.get()
     generation = review._begin_review_generation(self)
@@ -601,7 +604,7 @@ def provider_generate_review(self):
                     self._review_queue.put((generation, "ok", text))
                     return
                 except Exception as exc:
-                    errors.append(f"{model}: {exc}")
+                    errors.append(f"{model}: {redact_error(exc, key)}")
                     if not should_try_review_fallback(exc, GROQ):
                         break
 
@@ -611,7 +614,7 @@ def provider_generate_review(self):
                 "Groq coaching review could not be generated.\n\n" + "\n\n".join(errors[-2:]),
             ))
         except Exception as exc:
-            self._review_queue.put((generation, "error", str(exc)))
+            self._review_queue.put((generation, "error", redact_error(exc, key)))
         finally:
             if client is not None:
                 try:
@@ -633,3 +636,4 @@ base.App.generate_coaching_review = provider_generate_review
 
 if __name__ == "__main__":
     base.App().mainloop()
+

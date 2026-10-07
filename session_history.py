@@ -71,6 +71,8 @@ class SessionHistory:
         if len(content) > MAX_BYTES:
             raise ValueError("This session is too large to save locally.")
         self.directory.mkdir(parents=True, exist_ok=True, mode=0o700)
+        if os.name != "nt":
+            self.directory.chmod(0o700)
         identifier = uuid.uuid4().hex
         target = self._path(identifier)
         temp_path = None
@@ -86,6 +88,8 @@ class SessionHistory:
 
     def load(self, identifier):
         path = self._path(identifier)
+        if path.is_symlink():
+            raise ValueError("Saved sessions cannot be symbolic links.")
         if path.stat().st_size > MAX_BYTES:
             raise ValueError("This saved session is too large.")
         return validate_record(json.loads(path.read_text(encoding="utf-8")))
@@ -105,3 +109,4 @@ class SessionHistory:
 
     def delete(self, identifier):
         self._path(identifier).unlink()
+

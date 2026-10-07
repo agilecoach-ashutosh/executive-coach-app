@@ -15,6 +15,7 @@ from reviewer import calculate_metrics, format_duration, generate_review
 from runtime_errors import classify_export_error, classify_runtime_error
 from review_summary import concise_review
 from ui_helpers import fit_window
+from runtime_errors import redact_error
 
 base = practice.base
 _original_init = base.App.__init__
@@ -535,6 +536,13 @@ def _show_evidence_turn(self, turn):
     widget.focus_set()
 
 
+def authorize_review(self, provider):
+    # A review is a separate upload, including restored/offline transcripts.
+    return messagebox.askyesno("Send transcript for review?",
+        f"Send this transcript and session metrics to {provider} for AI review?",
+        parent=self)
+
+
 def generate_coaching_review(self):
     if not self.transcript.rows:
         messagebox.showinfo("Review", "There is no practice transcript to review.")
@@ -546,6 +554,8 @@ def generate_coaching_review(self):
         messagebox.showinfo("Review", "A Gemini API key is required to generate the review.")
         return
 
+    if not authorize_review(self, "Google Gemini"):
+        return
     level = self.practice_review_level.get().upper()
     generation = _begin_review_generation(self)
     snapshot = _capture_review_snapshot(self)
@@ -570,7 +580,7 @@ def generate_coaching_review(self):
                 on_progress=lambda stage: self._review_queue.put((generation, "progress", stage)))
             self._review_queue.put((generation, "ok", result))
         except Exception as exc:
-            self._review_queue.put((generation, "error", str(exc)))
+            self._review_queue.put((generation, "error", redact_error(exc, api_key)))
 
     threading.Thread(target=worker, daemon=True).start()
     self.after(120, self._poll_review_result)
@@ -673,3 +683,4 @@ base.App.export_coaching_review = export_coaching_review
 
 if __name__ == "__main__":
     base.App().mainloop()
+

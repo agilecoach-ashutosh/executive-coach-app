@@ -9,7 +9,7 @@ from pathlib import Path
 from tkinter import filedialog, messagebox, ttk
 
 import keyring
-from ui_helpers import fit_window, tooltip
+from ui_helpers import fit_window, tooltip, begin_transcript_update, mark_last_turn
 import sounddevice as sd
 
 from coaching import IMMINENT_DANGER_RESPONSE, Transcript, detects_imminent_danger
@@ -996,7 +996,7 @@ class App(tk.Tk):
         bottom = self.log.yview()[1] >= .98
         position = self.log.yview()[0]
         self.log.configure(state='normal')
-        self.log.delete('1.0', 'end')
+        start = begin_transcript_update(self, 'coachee')
 
         if not self.transcript.rows:
             self.log.insert(
@@ -1007,7 +1007,9 @@ class App(tk.Tk):
                 'body',
             )
 
-        for stamp, role, text in self.transcript.rows:
+        for index in range(start, len(self.transcript.rows)):
+            mark_last_turn(self, index)
+            stamp, role, text = self.transcript.rows[index]
             name = dict(Coachee='YOU', Coach='PRESENCE').get(role, role.upper())
             self.log.insert('end', f'{name}   {stamp}\n', role)
             self.log.insert('end', text.strip() + '\n\n', 'body')
@@ -1247,3 +1249,4 @@ class App(tk.Tk):
 
 if __name__ == '__main__':
     App().mainloop()
+

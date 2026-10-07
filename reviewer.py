@@ -16,7 +16,7 @@ from google import genai
 from google.genai import types
 
 from review_criteria import get_review_criteria
-from runtime_errors import classify_runtime_error
+from runtime_errors import classify_runtime_error, redact_error
 
 REVIEW_MODELS = (
     "gemini-3.6-flash",
@@ -806,7 +806,7 @@ def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, sce
                     on_progress("Checking evidence and building report")
                 return structured_model_output_to_text(raw, level, rows)
             except Exception as exc:
-                errors.append(f"{model}: {exc}")
+                errors.append(f"{model}: {redact_error(exc, api_key)}")
                 issue = classify_runtime_error(exc, "Google Gemini", context="review")
                 stage = ("Gemini busy — trying another review model" if issue.code == "provider_unavailable"
                          else "Trying another Gemini review model")
@@ -823,3 +823,4 @@ def generate_review(api_key: str, level: str, rows, metrics: SessionMetrics, sce
             client.close()
         except Exception:
             pass
+
