@@ -17,8 +17,20 @@ class UserFacingError:
     message: str
 
 
+def redact_error(detail: object, *secrets: str) -> str:
+    """Remove credentials before errors enter queues, dialogs, or reports."""
+    text = str(detail)
+    for secret in secrets:
+        if secret:
+            text = text.replace(secret, "[redacted]")
+    text = re.sub(r"AIza[0-9A-Za-z_-]{20,}|gsk_[0-9A-Za-z_-]+", "[redacted]", text)
+    text = re.sub(r"(?i)(authorization\s*[:=]\s*(?:bearer\s+)?|(?:api[_-]?key|key)=)[^\s&\"']+",
+                  r"\1[redacted]", text)
+    return text[:800]
+
+
 def _clean(detail: object, limit: int = 240) -> str:
-    text = re.sub(r"\s+", " ", str(detail or "")).strip()
+    text = re.sub(r"\s+", " ", redact_error(detail or "")).strip()
     return text[:limit]
 
 
@@ -322,3 +334,4 @@ def classify_export_error(exc: BaseException, *, artifact: str = "file") -> User
             f"{technical}"
         ),
     )
+

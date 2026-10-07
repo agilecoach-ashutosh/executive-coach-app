@@ -447,3 +447,12 @@ to their respective owners' terms; see [Third-party notices](THIRD_PARTY_NOTICES
 ## Status
 
 Presence Coach is an experimental learning and coaching-practice project. Features and provider integrations may change as the project evolves.
+
+
+### Performance and review privacy
+
+- Every AI review asks permission to send the transcript and metrics to the selected provider, including reopened sessions.
+- Groq automatically processes a speaking turn at five minutes, even while Hold my turn is enabled. This bounds temporary audio memory.
+- End session closes the Groq connection in the background; live requests do not retry automatically. Cancellation remains subject to the HTTP transport's timeout.
+- Transcript updates replace only the latest turn. History loads in the background and displays 100 entries at a time; use Load more for older entries.
+- Credential-like values are redacted from review errors. Local history and exported Word/MP3 files remain unencrypted; protect them with device access controls and disk encryption.

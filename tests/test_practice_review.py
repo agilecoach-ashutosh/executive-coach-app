@@ -32,7 +32,7 @@ class PracticeReviewGenerationTests(unittest.TestCase):
         state._review_export_button = None
         state.after = Mock()
         state._poll_review_result = Mock()
-        with patch.object(provider, "Groq", side_effect=RuntimeError("Transport unavailable")), \
+        with patch.object(practice_review, "authorize_review", return_value=True), patch.object(provider, "Groq", side_effect=RuntimeError("Transport unavailable")), \
                 patch.object(provider.threading, "Thread", side_effect=lambda target, **_: types.SimpleNamespace(start=target)), \
                 patch.object(practice_review, "_set_review_output"):
             provider.provider_generate_review(state)
@@ -149,3 +149,4 @@ class PracticeReviewGenerationTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+

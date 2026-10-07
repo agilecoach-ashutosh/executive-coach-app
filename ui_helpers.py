@@ -50,3 +50,25 @@ def tooltip(widget, text):
         widget.bind(event, schedule, add="+")
     for event in ("<Leave>", "<FocusOut>", "<ButtonPress>", "<Destroy>"):
         widget.bind(event, hide, add="+")
+
+
+
+def begin_transcript_update(app, context):
+    """Only replace the mutable last turn and append newly completed turns."""
+    rows = app.transcript.rows
+    previous = getattr(app, "_transcript_view", None)
+    start = 0
+    if (previous and previous[0] is app.transcript and previous[1] == context
+            and previous[2] > 0 and len(rows) >= previous[2]):
+        start = previous[2] - 1
+        app.log.delete("presence_last_turn", "end")
+    else:
+        app.log.delete("1.0", "end")
+    app._transcript_view = (app.transcript, context, len(rows))
+    return start
+
+
+def mark_last_turn(app, index):
+    if index == len(app.transcript.rows) - 1:
+        app.log.mark_set("presence_last_turn", "end-1c")
+        app.log.mark_gravity("presence_last_turn", "left")

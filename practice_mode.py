@@ -9,7 +9,7 @@ import random
 import time
 import tkinter as tk
 from tkinter import messagebox, ttk
-from ui_helpers import fit_window
+from ui_helpers import fit_window, begin_transcript_update, mark_last_turn
 
 import app as base
 from scenarios import (
@@ -629,7 +629,7 @@ def practice_render(self):
     bottom = self.log.yview()[1] >= .98
     position = self.log.yview()[0]
     self.log.configure(state='normal')
-    self.log.delete('1.0', 'end')
+    start = begin_transcript_update(self, ('coach', str(self.current_scenario)))
 
     scenario = self.current_scenario
     if not self.transcript.rows:
@@ -654,7 +654,9 @@ def practice_render(self):
         else:
             self.log.insert('end', 'Choose a practice client to begin.\n', 'body')
 
-    for stamp, role, text in self.transcript.rows:
+    for index in range(start, len(self.transcript.rows)):
+        mark_last_turn(self, index)
+        stamp, role, text = self.transcript.rows[index]
         if role == 'Coach':
             name = 'YOU · COACH'
         elif role == 'Coachee':
@@ -722,3 +724,4 @@ base.App.animate = practice_animate
 
 if __name__ == '__main__':
     base.App().mainloop()
+
